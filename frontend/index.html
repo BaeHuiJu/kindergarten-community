@@ -125,6 +125,7 @@
 
                 <div class="expenses-tabs">
                     <button data-tab="input" class="tab active">비용 입력</button>
+                    <button data-tab="student-summary" class="tab">학생별 집계</button>
                     <button data-tab="class-summary" class="tab">반별 집계</button>
                     <button data-tab="kg-summary" class="tab">유치원별 집계</button>
                 </div>
@@ -184,6 +185,23 @@
                         <h3>최근 비용 내역</h3>
                         <div id="expense-list"></div>
                     </div>
+                </div>
+
+                <!-- 학생별 집계 탭 -->
+                <div id="student-summary-tab" class="expense-tab">
+                    <div class="summary-selector">
+                        <select id="student-summary-kindergarten">
+                            <option value="">유치원 선택</option>
+                        </select>
+                        <select id="student-summary-class">
+                            <option value="">반 선택</option>
+                        </select>
+                        <select id="student-summary-student">
+                            <option value="">학생 선택</option>
+                        </select>
+                        <button id="load-student-summary" class="btn btn-primary">조회</button>
+                    </div>
+                    <div id="student-summary-result"></div>
                 </div>
 
                 <!-- 반별 집계 탭 -->

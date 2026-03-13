@@ -78,27 +78,47 @@ const components = {
     },
 
     summaryCard(summary, type = 'class') {
-        const categoryItems = Object.entries(summary.expenses_by_category || {})
+        const categoryData = summary.by_category || summary.expenses_by_category || {};
+        const categoryItems = Object.entries(categoryData)
             .map(([cat, amount]) => `<li><span>${cat}</span><span>${this.formatMoney(amount)}</span></li>`)
             .join('') || '<li>데이터 없음</li>';
 
+        let title = '';
+        if (type === 'student') {
+            title = summary.student_name || '학생';
+        } else if (type === 'class') {
+            title = summary.class_name || '반';
+        } else {
+            title = summary.kindergarten_name || '유치원';
+        }
+
+        const totalAmount = summary.total || summary.total_expenses || 0;
+
         return `
             <div class="summary-card">
-                <h3>${type === 'class' ? summary.class_name : summary.kindergarten_name}</h3>
+                <h3>${title}</h3>
                 <div class="summary-stats">
                     ${type === 'kindergarten' ? `
                         <div class="summary-stat">
                             <div class="label">총 반 수</div>
-                            <div class="value">${summary.total_classes}</div>
+                            <div class="value">${summary.class_count || summary.total_classes || 0}</div>
+                        </div>
+                    ` : ''}
+                    ${type !== 'student' ? `
+                        <div class="summary-stat">
+                            <div class="label">총 학생 수</div>
+                            <div class="value">${summary.student_count || summary.total_students || 0}명</div>
+                        </div>
+                    ` : ''}
+                    ${type === 'student' ? `
+                        <div class="summary-stat">
+                            <div class="label">총 비용 건수</div>
+                            <div class="value">${summary.expense_count || 0}건</div>
                         </div>
                     ` : ''}
                     <div class="summary-stat">
-                        <div class="label">총 학생 수</div>
-                        <div class="value">${summary.total_students}명</div>
-                    </div>
-                    <div class="summary-stat">
                         <div class="label">총 비용</div>
-                        <div class="value">${this.formatMoney(summary.total_expenses)}</div>
+                        <div class="value">${this.formatMoney(totalAmount)}</div>
                     </div>
                 </div>
                 <div class="category-breakdown">

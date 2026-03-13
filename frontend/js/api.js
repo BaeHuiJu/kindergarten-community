@@ -147,5 +147,10 @@ const api = {
     async getKindergartenSummary(kindergartenId) {
         const res = await fetch(`${API_BASE}/expenses/summary/kindergarten/${kindergartenId}`);
         return res.json();
+    },
+
+    async getStudentSummary(studentId) {
+        const res = await fetch(`${API_BASE}/expenses/summary/student/${studentId}`);
+        return res.json();
     }
 };

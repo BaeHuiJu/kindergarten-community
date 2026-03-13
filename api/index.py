@@ -444,3 +444,21 @@ def get_kg_summary(kg_id: int, db: Session = Depends(get_db)):
     for e in expenses:
         by_cat[e.category] = by_cat.get(e.category, 0) + e.amount
     return {"kindergarten_id": kg_id, "total": sum(e.amount for e in expenses), "by_category": by_cat}
+
+
+@app.get("/api/expenses/summary/student/{student_id}")
+def get_student_summary(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    expenses = db.query(Expense).filter(Expense.student_id == student_id).all()
+    by_cat = {}
+    for e in expenses:
+        by_cat[e.category] = by_cat.get(e.category, 0) + e.amount
+    return {
+        "student_id": student_id,
+        "student_name": student.name,
+        "total": sum(e.amount for e in expenses),
+        "expense_count": len(expenses),
+        "by_category": by_cat
+    }

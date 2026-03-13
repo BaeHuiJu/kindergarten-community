@@ -99,6 +99,41 @@ function setupEventListeners() {
         });
     });
 
+    // Student summary cascade selects
+    document.getElementById('student-summary-kindergarten').addEventListener('change', async (e) => {
+        const kgId = e.target.value;
+        const classSelect = document.getElementById('student-summary-class');
+        const studentSelect = document.getElementById('student-summary-student');
+        classSelect.innerHTML = '<option value="">반 선택</option>';
+        studentSelect.innerHTML = '<option value="">학생 선택</option>';
+        if (kgId) {
+            const classes = await api.getClasses(kgId);
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls.id;
+                option.textContent = cls.name;
+                classSelect.appendChild(option);
+            });
+        }
+    });
+
+    document.getElementById('student-summary-class').addEventListener('change', async (e) => {
+        const classId = e.target.value;
+        const studentSelect = document.getElementById('student-summary-student');
+        studentSelect.innerHTML = '<option value="">학생 선택</option>';
+        if (classId) {
+            const students = await api.getStudents(classId);
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.name} (${student.age}세)`;
+                studentSelect.appendChild(option);
+            });
+        }
+    });
+
+    document.getElementById('load-student-summary').addEventListener('click', loadStudentSummary);
+
     // Expense form cascade
     document.getElementById('expense-kindergarten').addEventListener('change', async (e) => {
         const kgId = e.target.value;
@@ -414,8 +449,23 @@ async function loadKindergartenSummary() {
     }
 }
 
+async function loadStudentSummary() {
+    const studentId = document.getElementById('student-summary-student').value;
+    if (!studentId) {
+        alert('학생을 선택해주세요.');
+        return;
+    }
+
+    try {
+        const summary = await api.getStudentSummary(studentId);
+        document.getElementById('student-summary-result').innerHTML = components.summaryCard(summary, 'student');
+    } catch (error) {
+        alert('집계 조회에 실패했습니다.');
+    }
+}
+
 function populateKindergartenSelects() {
-    const selects = ['expense-kindergarten', 'summary-kindergarten', 'kg-summary-kindergarten'];
+    const selects = ['expense-kindergarten', 'summary-kindergarten', 'kg-summary-kindergarten', 'student-summary-kindergarten'];
     selects.forEach(id => {
         const select = document.getElementById(id);
         if (select) {
