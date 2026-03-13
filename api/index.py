@@ -18,6 +18,9 @@ if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./kindergarten.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
+    # Convert postgresql:// to postgresql+pg8000:// for pg8000 driver
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
     engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
