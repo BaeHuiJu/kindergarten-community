@@ -3,7 +3,6 @@ const state = {
     currentUser: null,
     currentPost: null,
     editingPost: null,
-    kindergartens: [],
     classes: [],
     students: []
 };
@@ -14,35 +13,21 @@ const navLinks = document.querySelectorAll('.nav-links a');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-    // 인증 확인 및 사용자 설정
-    if (auth.isLoggedIn()) {
+    // Check if on expenses page without login
+    if (!auth.isLoggedIn()) {
+        // Allow viewing home and board without login
+    } else {
         state.currentUser = auth.getUser();
-        // 서버에서 최신 사용자 정보 가져오기
         const freshUser = await auth.fetchCurrentUser();
         if (freshUser) {
             state.currentUser = freshUser;
         }
     }
 
-    // 네비게이션 바 업데이트
     auth.updateNavbar();
-
-    await loadInitialData();
     setupEventListeners();
     showPage('home');
 });
-
-async function loadInitialData() {
-    try {
-        // Load kindergartens
-        state.kindergartens = await api.getKindergartens();
-
-        // Load home stats
-        await loadHomeStats();
-    } catch (error) {
-        console.error('Failed to load initial data:', error);
-    }
-}
 
 function setupEventListeners() {
     // Navigation
@@ -90,7 +75,6 @@ function setupEventListeners() {
             e.target.classList.add('active');
             const tabName = e.target.dataset.tab;
             document.querySelectorAll('.expense-tab').forEach(t => t.classList.remove('active'));
-            // Fix: 'input' tab의 실제 ID는 'expense-input-tab'
             const tabId = tabName === 'input' ? 'expense-input-tab' : `${tabName}-tab`;
             const tabEl = document.getElementById(tabId);
             if (tabEl) {
@@ -99,24 +83,23 @@ function setupEventListeners() {
         });
     });
 
-    // Student summary cascade selects
-    document.getElementById('student-summary-kindergarten').addEventListener('change', async (e) => {
-        const kgId = e.target.value;
-        const classSelect = document.getElementById('student-summary-class');
-        const studentSelect = document.getElementById('student-summary-student');
-        classSelect.innerHTML = '<option value="">반 선택</option>';
-        studentSelect.innerHTML = '<option value="">학생 선택</option>';
-        if (kgId) {
-            const classes = await api.getClasses(kgId);
-            classes.forEach(cls => {
+    // Expense class change -> load students
+    document.getElementById('expense-class').addEventListener('change', async (e) => {
+        const classId = e.target.value;
+        const studentSelect = document.getElementById('expense-student');
+        studentSelect.innerHTML = '<option value="">선택하세요</option>';
+        if (classId) {
+            const students = await api.getStudents(classId);
+            students.forEach(student => {
                 const option = document.createElement('option');
-                option.value = cls.id;
-                option.textContent = cls.name;
-                classSelect.appendChild(option);
+                option.value = student.id;
+                option.textContent = `${student.name} (${student.age}세)`;
+                studentSelect.appendChild(option);
             });
         }
     });
 
+    // Student summary: class change -> load students
     document.getElementById('student-summary-class').addEventListener('change', async (e) => {
         const classId = e.target.value;
         const studentSelect = document.getElementById('student-summary-student');
@@ -133,42 +116,11 @@ function setupEventListeners() {
     });
 
     document.getElementById('load-student-summary').addEventListener('click', loadStudentSummary);
-
-    // Expense form cascade
-    document.getElementById('expense-kindergarten').addEventListener('change', async (e) => {
-        const kgId = e.target.value;
-        if (kgId) {
-            state.classes = await api.getClasses(kgId);
-            populateClassSelect('expense-class', state.classes);
-        }
-        document.getElementById('expense-class').value = '';
-        document.getElementById('expense-student').innerHTML = '<option value="">선택하세요</option>';
-    });
-
-    document.getElementById('expense-class').addEventListener('change', async (e) => {
-        const classId = e.target.value;
-        if (classId) {
-            state.students = await api.getStudents(classId);
-            populateStudentSelect('expense-student', state.students);
-        }
-    });
-
-    document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
-
-    // Summary selects
-    document.getElementById('summary-kindergarten').addEventListener('change', async (e) => {
-        const kgId = e.target.value;
-        if (kgId) {
-            const classes = await api.getClasses(kgId);
-            populateClassSelect('summary-class', classes);
-        }
-    });
-
     document.getElementById('load-class-summary').addEventListener('click', loadClassSummary);
     document.getElementById('load-kg-summary').addEventListener('click', loadKindergartenSummary);
 
-    // Initialize kindergarten selects
-    populateKindergartenSelects();
+    // Expense form
+    document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
 }
 
 function showPage(pageName) {
@@ -194,6 +146,11 @@ function showPage(pageName) {
             loadPosts();
             break;
         case 'expenses':
+            if (!state.currentUser) {
+                alert('로그인이 필요합니다.');
+                window.location.href = 'login.html';
+                return;
+            }
             loadExpenses();
             break;
         case 'profile':
@@ -367,7 +324,16 @@ async function deleteComment(commentId) {
 }
 
 async function loadExpenses() {
-    populateKindergartenSelects();
+    // Show user's kindergarten info
+    const infoEl = document.getElementById('my-kindergarten-info');
+    if (state.currentUser && state.currentUser.kindergarten_name) {
+        infoEl.textContent = `소속 유치원: ${state.currentUser.kindergarten_name}`;
+    } else {
+        infoEl.textContent = '유치원 정보가 없습니다. 프로필을 확인해주세요.';
+    }
+
+    // Load classes for user's kindergarten
+    await loadMyClasses();
 
     try {
         const expenses = await api.getExpenses();
@@ -394,8 +360,37 @@ async function loadExpenses() {
     }
 }
 
+async function loadMyClasses() {
+    try {
+        const classes = await api.getClasses();
+        state.classes = classes;
+
+        // Populate all class selects
+        const classSelects = ['expense-class', 'summary-class', 'student-summary-class'];
+        classSelects.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                select.innerHTML = '<option value="">반 선택</option>';
+                classes.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls.id;
+                    option.textContent = cls.name;
+                    select.appendChild(option);
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load classes:', error);
+    }
+}
+
 async function handleExpenseSubmit(e) {
     e.preventDefault();
+
+    if (!state.currentUser) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
 
     const data = {
         student_id: parseInt(document.getElementById('expense-student').value),
@@ -415,7 +410,11 @@ async function handleExpenseSubmit(e) {
         document.getElementById('expense-form').reset();
         loadExpenses();
     } catch (error) {
-        alert('비용 추가에 실패했습니다.');
+        if (error.message && error.message.includes('Access denied')) {
+            alert('접근 권한이 없습니다. 해당 학생은 다른 유치원 소속입니다.');
+        } else {
+            alert('비용 추가에 실패했습니다.');
+        }
     }
 }
 
@@ -435,14 +434,13 @@ async function loadClassSummary() {
 }
 
 async function loadKindergartenSummary() {
-    const kgId = document.getElementById('kg-summary-kindergarten').value;
-    if (!kgId) {
-        alert('유치원을 선택해주세요.');
+    if (!state.currentUser || !state.currentUser.kindergarten_id) {
+        alert('유치원 정보가 없습니다.');
         return;
     }
 
     try {
-        const summary = await api.getKindergartenSummary(kgId);
+        const summary = await api.getKindergartenSummary(state.currentUser.kindergarten_id);
         document.getElementById('kg-summary-result').innerHTML = components.summaryCard(summary, 'kindergarten');
     } catch (error) {
         alert('집계 조회에 실패했습니다.');
@@ -462,44 +460,6 @@ async function loadStudentSummary() {
     } catch (error) {
         alert('집계 조회에 실패했습니다.');
     }
-}
-
-function populateKindergartenSelects() {
-    const selects = ['expense-kindergarten', 'summary-kindergarten', 'kg-summary-kindergarten', 'student-summary-kindergarten'];
-    selects.forEach(id => {
-        const select = document.getElementById(id);
-        if (select) {
-            select.innerHTML = '<option value="">선택하세요</option>';
-            state.kindergartens.forEach(kg => {
-                const option = document.createElement('option');
-                option.value = kg.id;
-                option.textContent = kg.name;
-                select.appendChild(option);
-            });
-        }
-    });
-}
-
-function populateClassSelect(selectId, classes) {
-    const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">선택하세요</option>';
-    classes.forEach(cls => {
-        const option = document.createElement('option');
-        option.value = cls.id;
-        option.textContent = cls.name;
-        select.appendChild(option);
-    });
-}
-
-function populateStudentSelect(selectId, students) {
-    const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">선택하세요</option>';
-    students.forEach(student => {
-        const option = document.createElement('option');
-        option.value = student.id;
-        option.textContent = `${student.name} (${student.age}세)`;
-        select.appendChild(option);
-    });
 }
 
 function loadProfile() {

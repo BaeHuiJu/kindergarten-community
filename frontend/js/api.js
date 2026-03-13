@@ -4,21 +4,35 @@ const API_BASE = window.location.hostname === 'localhost'
     : '/api';
 
 const api = {
+    // Helper to get auth headers
+    getAuthHeaders() {
+        const token = localStorage.getItem('kindergarten_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
+    },
+
     // Users
     async getUsers() {
-        const res = await fetch(`${API_BASE}/users/`);
+        const res = await fetch(`${API_BASE}/users/`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async getUser(id) {
-        const res = await fetch(`${API_BASE}/users/${id}`);
+        const res = await fetch(`${API_BASE}/users/${id}`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async createUser(data) {
         const res = await fetch(`${API_BASE}/users/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return res.json();
@@ -27,7 +41,7 @@ const api = {
     async updateUser(id, data) {
         const res = await fetch(`${API_BASE}/users/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return res.json();
@@ -37,19 +51,23 @@ const api = {
     async getPosts(category = null) {
         let url = `${API_BASE}/posts/`;
         if (category) url += `?category=${encodeURIComponent(category)}`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async getPost(id) {
-        const res = await fetch(`${API_BASE}/posts/${id}`);
+        const res = await fetch(`${API_BASE}/posts/${id}`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async createPost(data) {
         const res = await fetch(`${API_BASE}/posts/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return res.json();
@@ -58,7 +76,7 @@ const api = {
     async updatePost(id, data) {
         const res = await fetch(`${API_BASE}/posts/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return res.json();
@@ -66,21 +84,24 @@ const api = {
 
     async deletePost(id) {
         const res = await fetch(`${API_BASE}/posts/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
         });
         return res.json();
     },
 
     // Comments
     async getComments(postId) {
-        const res = await fetch(`${API_BASE}/comments/post/${postId}`);
+        const res = await fetch(`${API_BASE}/comments/post/${postId}`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async createComment(data) {
         const res = await fetch(`${API_BASE}/comments/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return res.json();
@@ -88,7 +109,8 @@ const api = {
 
     async deleteComment(id) {
         const res = await fetch(`${API_BASE}/comments/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
         });
         return res.json();
     },
@@ -99,11 +121,44 @@ const api = {
         return res.json();
     },
 
+    async getMyKindergarten() {
+        const res = await fetch(`${API_BASE}/kindergartens/my`, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
     // Classes
     async getClasses(kindergartenId = null) {
         let url = `${API_BASE}/students/classes/`;
         if (kindergartenId) url += `?kindergarten_id=${kindergartenId}`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async getMyClasses() {
+        const res = await fetch(`${API_BASE}/classes/my`, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async createClass(data) {
+        const res = await fetch(`${API_BASE}/classes/`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    async deleteClass(id) {
+        const res = await fetch(`${API_BASE}/classes/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
@@ -111,7 +166,33 @@ const api = {
     async getStudents(classId = null) {
         let url = `${API_BASE}/students/`;
         if (classId) url += `?class_id=${classId}`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async getMyStudents() {
+        const res = await fetch(`${API_BASE}/students/my`, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async createStudent(data) {
+        const res = await fetch(`${API_BASE}/students/`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    async deleteStudent(id) {
+        const res = await fetch(`${API_BASE}/students/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
@@ -119,14 +200,23 @@ const api = {
     async getExpenses(studentId = null) {
         let url = `${API_BASE}/expenses/`;
         if (studentId) url += `?student_id=${studentId}`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async getMyExpenses() {
+        const res = await fetch(`${API_BASE}/expenses/my`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async createExpense(data) {
         const res = await fetch(`${API_BASE}/expenses/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
         return res.json();
@@ -134,23 +224,37 @@ const api = {
 
     async deleteExpense(id) {
         const res = await fetch(`${API_BASE}/expenses/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
         });
         return res.json();
     },
 
     async getClassSummary(classId) {
-        const res = await fetch(`${API_BASE}/expenses/summary/class/${classId}`);
+        const res = await fetch(`${API_BASE}/expenses/summary/class/${classId}`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async getKindergartenSummary(kindergartenId) {
-        const res = await fetch(`${API_BASE}/expenses/summary/kindergarten/${kindergartenId}`);
+        const res = await fetch(`${API_BASE}/expenses/summary/kindergarten/${kindergartenId}`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     },
 
     async getStudentSummary(studentId) {
-        const res = await fetch(`${API_BASE}/expenses/summary/student/${studentId}`);
+        const res = await fetch(`${API_BASE}/expenses/summary/student/${studentId}`, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async getMySummary() {
+        const res = await fetch(`${API_BASE}/expenses/summary/my`, {
+            headers: this.getAuthHeaders()
+        });
         return res.json();
     }
 };

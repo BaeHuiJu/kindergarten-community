@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Float
@@ -24,7 +24,6 @@ def get_engine():
             DATABASE_URL = "sqlite:///./kindergarten.db"
             engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
         else:
-            # Strip whitespace/newlines from URL
             DATABASE_URL = DATABASE_URL.strip()
             engine = create_engine(DATABASE_URL)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -41,7 +40,8 @@ class User(Base):
     password = Column(String(255))
     name = Column(String(100))
     region = Column(String(100))
-    kindergarten_name = Column(String(200))
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
+    kindergarten_name = Column(String(200))  # 기존 호환성 유지
     class_name = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -53,6 +53,7 @@ class Post(Base):
     content = Column(Text)
     category = Column(String(50))
     author_id = Column(Integer, ForeignKey("users.id"))
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -119,7 +120,8 @@ class UserResponse(BaseModel):
     email: str
     name: str
     region: str
-    kindergarten_name: str
+    kindergarten_id: Optional[int] = None
+    kindergarten_name: Optional[str] = None
     class_name: str
     created_at: datetime
     class Config:
@@ -132,6 +134,7 @@ class PostResponse(BaseModel):
     content: str
     category: str
     author_id: int
+    kindergarten_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     class Config:
@@ -164,10 +167,16 @@ class CommentCreate(BaseModel):
 class KindergartenResponse(BaseModel):
     id: int
     name: str
-    region: str
+    region: Optional[str] = None
     address: Optional[str] = None
     class Config:
         from_attributes = True
+
+
+class KindergartenCreate(BaseModel):
+    name: str
+    region: Optional[str] = None
+    address: Optional[str] = None
 
 
 class ClassResponse(BaseModel):
@@ -179,6 +188,11 @@ class ClassResponse(BaseModel):
         from_attributes = True
 
 
+class ClassCreate(BaseModel):
+    name: str
+    teacher_name: Optional[str] = None
+
+
 class StudentResponse(BaseModel):
     id: int
     name: str
@@ -188,6 +202,14 @@ class StudentResponse(BaseModel):
     parent_phone: Optional[str] = None
     class Config:
         from_attributes = True
+
+
+class StudentCreate(BaseModel):
+    name: str
+    age: int
+    class_id: int
+    parent_name: Optional[str] = None
+    parent_phone: Optional[str] = None
 
 
 class ExpenseResponse(BaseModel):
@@ -225,7 +247,8 @@ class SignupRequest(BaseModel):
     password: str
     name: str
     region: str
-    kindergarten_name: str
+    kindergarten_id: Optional[int] = None
+    kindergarten_name: Optional[str] = None
     class_name: str
 
 
@@ -233,7 +256,7 @@ class SignupRequest(BaseModel):
 SECRET_KEY = os.getenv("SECRET_KEY", "kindergarten-community-secret-key-2024")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -255,6 +278,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload.get("sub"))
@@ -264,6 +289,42 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except:
         pass
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+def get_optional_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Optional authentication - returns None if not authenticated"""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+    except:
+        return None
+
+
+def verify_kindergarten_access(user: User, kindergarten_id: int):
+    """Verify user has access to the specified kindergarten"""
+    if user.kindergarten_id != kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied: You don't have permission to access this kindergarten's data")
+
+
+def get_user_class_ids(db: Session, user: User) -> List[int]:
+    """Get all class IDs belonging to user's kindergarten"""
+    if not user.kindergarten_id:
+        return []
+    classes = db.query(Class).filter(Class.kindergarten_id == user.kindergarten_id).all()
+    return [c.id for c in classes]
+
+
+def get_user_student_ids(db: Session, user: User) -> List[int]:
+    """Get all student IDs belonging to user's kindergarten"""
+    class_ids = get_user_class_ids(db, user)
+    if not class_ids:
+        return []
+    students = db.query(Student).filter(Student.class_id.in_(class_ids)).all()
+    return [s.id for s in students]
 
 
 # FastAPI App
@@ -281,12 +342,45 @@ def health():
     return {"status": "healthy"}
 
 
+# ==================== AUTH ====================
+
 @app.post("/api/auth/signup", response_model=Token)
 def signup(req: SignupRequest, db: Session = Depends(get_db)):
     if db.query(User).filter((User.username == req.username) | (User.email == req.email)).first():
         raise HTTPException(status_code=400, detail="User already exists")
-    user = User(username=req.username, email=req.email, password=get_password_hash(req.password),
-                name=req.name, region=req.region, kindergarten_name=req.kindergarten_name, class_name=req.class_name)
+
+    kindergarten_id = req.kindergarten_id
+    kindergarten_name = req.kindergarten_name
+
+    # If kindergarten_id is provided, verify it exists
+    if kindergarten_id:
+        kg = db.query(Kindergarten).filter(Kindergarten.id == kindergarten_id).first()
+        if not kg:
+            raise HTTPException(status_code=400, detail="Kindergarten not found")
+        kindergarten_name = kg.name
+    # If only kindergarten_name is provided, create new kindergarten
+    elif kindergarten_name:
+        # Check if kindergarten with same name exists
+        existing_kg = db.query(Kindergarten).filter(Kindergarten.name == kindergarten_name).first()
+        if existing_kg:
+            kindergarten_id = existing_kg.id
+        else:
+            new_kg = Kindergarten(name=kindergarten_name, region=req.region)
+            db.add(new_kg)
+            db.commit()
+            db.refresh(new_kg)
+            kindergarten_id = new_kg.id
+
+    user = User(
+        username=req.username,
+        email=req.email,
+        password=get_password_hash(req.password),
+        name=req.name,
+        region=req.region,
+        kindergarten_id=kindergarten_id,
+        kindergarten_name=kindergarten_name,
+        class_name=req.class_name
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -308,8 +402,13 @@ def get_me(user: User = Depends(get_current_user)):
     return user
 
 
+# ==================== USERS ====================
+
 @app.get("/api/users/", response_model=List[UserResponse])
-def get_users(db: Session = Depends(get_db)):
+def get_users(db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
+    # Filter by kindergarten if user is logged in
+    if user and user.kindergarten_id:
+        return db.query(User).filter(User.kindergarten_id == user.kindergarten_id).all()
     return db.query(User).all()
 
 
@@ -321,39 +420,72 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
+# ==================== POSTS ====================
+
 @app.get("/api/posts/", response_model=List[PostResponse])
-def get_posts(category: Optional[str] = None, db: Session = Depends(get_db)):
+def get_posts(category: Optional[str] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
     q = db.query(Post)
+    # Filter by kindergarten if user is logged in
+    if user and user.kindergarten_id:
+        q = q.filter((Post.kindergarten_id == user.kindergarten_id) | (Post.kindergarten_id == None))
     if category:
         q = q.filter(Post.category == category)
     return q.order_by(Post.created_at.desc()).all()
 
 
 @app.get("/api/posts/{post_id}", response_model=PostResponse)
-def get_post(post_id: int, db: Session = Depends(get_db)):
+def get_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    # Check access for kindergarten-specific posts
+    if post.kindergarten_id and user and user.kindergarten_id != post.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     return post
 
 
 @app.post("/api/posts/", response_model=PostResponse)
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
-    db_post = Post(**post.model_dump())
+def create_post(post: PostCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    db_post = Post(
+        title=post.title,
+        content=post.content,
+        category=post.category,
+        author_id=user.id,
+        kindergarten_id=user.kindergarten_id
+    )
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
     return db_post
 
 
+@app.put("/api/posts/{post_id}", response_model=PostResponse)
+def update_post(post_id: int, post: PostCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    db_post = db.query(Post).filter(Post.id == post_id).first()
+    if not db_post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if db_post.author_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db_post.title = post.title
+    db_post.content = post.content
+    db_post.category = post.category
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+
+
 @app.delete("/api/posts/{post_id}")
-def delete_post(post_id: int, db: Session = Depends(get_db)):
+def delete_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if post:
+        if post.author_id != user.id:
+            raise HTTPException(status_code=403, detail="Not authorized")
         db.delete(post)
         db.commit()
     return {"message": "Deleted"}
 
+
+# ==================== COMMENTS ====================
 
 @app.get("/api/comments/post/{post_id}", response_model=List[CommentResponse])
 def get_comments(post_id: int, db: Session = Depends(get_db)):
@@ -361,8 +493,12 @@ def get_comments(post_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/comments/", response_model=CommentResponse)
-def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
-    db_comment = Comment(**comment.model_dump())
+def create_comment(comment: CommentCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    db_comment = Comment(
+        content=comment.content,
+        post_id=comment.post_id,
+        author_id=user.id
+    )
     db.add(db_comment)
     db.commit()
     db.refresh(db_comment)
@@ -370,45 +506,204 @@ def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/comments/{comment_id}")
-def delete_comment(comment_id: int, db: Session = Depends(get_db)):
+def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if comment:
+        if comment.author_id != user.id:
+            raise HTTPException(status_code=403, detail="Not authorized")
         db.delete(comment)
         db.commit()
     return {"message": "Deleted"}
 
 
+# ==================== KINDERGARTENS ====================
+
 @app.get("/api/students/kindergartens/", response_model=List[KindergartenResponse])
 def get_kindergartens(db: Session = Depends(get_db)):
+    """Get all kindergartens (for signup/selection)"""
     return db.query(Kindergarten).all()
 
 
+@app.get("/api/kindergartens/my", response_model=KindergartenResponse)
+def get_my_kindergarten(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get current user's kindergarten"""
+    if not user.kindergarten_id:
+        raise HTTPException(status_code=404, detail="No kindergarten assigned")
+    kg = db.query(Kindergarten).filter(Kindergarten.id == user.kindergarten_id).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+    return kg
+
+
+@app.post("/api/kindergartens/", response_model=KindergartenResponse)
+def create_kindergarten(kg: KindergartenCreate, db: Session = Depends(get_db)):
+    """Create a new kindergarten"""
+    db_kg = Kindergarten(name=kg.name, region=kg.region, address=kg.address)
+    db.add(db_kg)
+    db.commit()
+    db.refresh(db_kg)
+    return db_kg
+
+
+# ==================== CLASSES (Kindergarten-scoped) ====================
+
 @app.get("/api/students/classes/", response_model=List[ClassResponse])
-def get_classes(kindergarten_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_classes(kindergarten_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
+    """Get classes - filtered by user's kindergarten when logged in"""
     q = db.query(Class)
-    if kindergarten_id:
+
+    # If logged in, force filter by user's kindergarten
+    if user and user.kindergarten_id:
+        q = q.filter(Class.kindergarten_id == user.kindergarten_id)
+    elif kindergarten_id:
         q = q.filter(Class.kindergarten_id == kindergarten_id)
+
     return q.all()
 
+
+@app.get("/api/classes/my", response_model=List[ClassResponse])
+def get_my_classes(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get classes for current user's kindergarten"""
+    if not user.kindergarten_id:
+        return []
+    return db.query(Class).filter(Class.kindergarten_id == user.kindergarten_id).all()
+
+
+@app.post("/api/classes/", response_model=ClassResponse)
+def create_class(cls: ClassCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new class in user's kindergarten"""
+    if not user.kindergarten_id:
+        raise HTTPException(status_code=400, detail="User has no kindergarten assigned")
+    db_class = Class(
+        name=cls.name,
+        kindergarten_id=user.kindergarten_id,
+        teacher_name=cls.teacher_name or user.name
+    )
+    db.add(db_class)
+    db.commit()
+    db.refresh(db_class)
+    return db_class
+
+
+@app.delete("/api/classes/{class_id}")
+def delete_class(class_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete a class (only if it belongs to user's kindergarten)"""
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+    if cls.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    db.delete(cls)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+# ==================== STUDENTS (Kindergarten-scoped) ====================
 
 @app.get("/api/students/", response_model=List[StudentResponse])
-def get_students(class_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_students(class_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
+    """Get students - filtered by user's kindergarten when logged in"""
     q = db.query(Student)
-    if class_id:
+
+    if user and user.kindergarten_id:
+        # Only show students from user's kindergarten
+        class_ids = get_user_class_ids(db, user)
+        if not class_ids:
+            return []
+        q = q.filter(Student.class_id.in_(class_ids))
+        if class_id and class_id in class_ids:
+            q = q.filter(Student.class_id == class_id)
+    elif class_id:
         q = q.filter(Student.class_id == class_id)
+
     return q.all()
 
 
+@app.get("/api/students/my", response_model=List[StudentResponse])
+def get_my_students(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get all students in user's kindergarten"""
+    class_ids = get_user_class_ids(db, user)
+    if not class_ids:
+        return []
+    return db.query(Student).filter(Student.class_id.in_(class_ids)).all()
+
+
+@app.post("/api/students/", response_model=StudentResponse)
+def create_student(student: StudentCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new student (must be in user's kindergarten's class)"""
+    # Verify class belongs to user's kindergarten
+    cls = db.query(Class).filter(Class.id == student.class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+    if cls.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied: Class does not belong to your kindergarten")
+
+    db_student = Student(**student.model_dump())
+    db.add(db_student)
+    db.commit()
+    db.refresh(db_student)
+    return db_student
+
+
+@app.delete("/api/students/{student_id}")
+def delete_student(student_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete a student (only if it belongs to user's kindergarten)"""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Verify student belongs to user's kindergarten
+    cls = db.query(Class).filter(Class.id == student.class_id).first()
+    if not cls or cls.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    db.delete(student)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+# ==================== EXPENSES (Kindergarten-scoped) ====================
+
 @app.get("/api/expenses/", response_model=List[ExpenseResponse])
-def get_expenses(student_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_expenses(student_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
+    """Get expenses - filtered by user's kindergarten when logged in"""
     q = db.query(Expense)
-    if student_id:
+
+    if user and user.kindergarten_id:
+        # Only show expenses for students in user's kindergarten
+        student_ids = get_user_student_ids(db, user)
+        if not student_ids:
+            return []
+        q = q.filter(Expense.student_id.in_(student_ids))
+        if student_id and student_id in student_ids:
+            q = q.filter(Expense.student_id == student_id)
+    elif student_id:
         q = q.filter(Expense.student_id == student_id)
+
     return q.order_by(Expense.date.desc()).all()
 
 
+@app.get("/api/expenses/my", response_model=List[ExpenseResponse])
+def get_my_expenses(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get all expenses in user's kindergarten"""
+    student_ids = get_user_student_ids(db, user)
+    if not student_ids:
+        return []
+    return db.query(Expense).filter(Expense.student_id.in_(student_ids)).order_by(Expense.date.desc()).all()
+
+
 @app.post("/api/expenses/", response_model=ExpenseResponse)
-def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
+def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new expense (student must be in user's kindergarten)"""
+    # Verify student belongs to user's kindergarten
+    student = db.query(Student).filter(Student.id == expense.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    cls = db.query(Class).filter(Class.id == student.class_id).first()
+    if not cls or cls.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied: Student does not belong to your kindergarten")
+
     db_expense = Expense(**expense.model_dump())
     db.add(db_expense)
     db.commit()
@@ -417,40 +712,88 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/expenses/{expense_id}")
-def delete_expense(expense_id: int, db: Session = Depends(get_db)):
+def delete_expense(expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete an expense (only if it belongs to user's kindergarten)"""
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
-    if expense:
-        db.delete(expense)
-        db.commit()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    # Verify expense belongs to user's kindergarten
+    student_ids = get_user_student_ids(db, user)
+    if expense.student_id not in student_ids:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    db.delete(expense)
+    db.commit()
     return {"message": "Deleted"}
 
 
+# ==================== EXPENSE SUMMARIES (Kindergarten-scoped) ====================
+
 @app.get("/api/expenses/summary/class/{class_id}")
-def get_class_summary(class_id: int, db: Session = Depends(get_db)):
+def get_class_summary(class_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get expense summary for a class (must belong to user's kindergarten)"""
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+    if cls.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     students = db.query(Student).filter(Student.class_id == class_id).all()
-    expenses = db.query(Expense).filter(Expense.student_id.in_([s.id for s in students])).all()
+    student_ids = [s.id for s in students]
+    expenses = db.query(Expense).filter(Expense.student_id.in_(student_ids)).all() if student_ids else []
     by_cat = {}
     for e in expenses:
         by_cat[e.category] = by_cat.get(e.category, 0) + e.amount
-    return {"class_id": class_id, "total": sum(e.amount for e in expenses), "by_category": by_cat}
+    return {
+        "class_id": class_id,
+        "class_name": cls.name,
+        "student_count": len(students),
+        "total": sum(e.amount for e in expenses),
+        "by_category": by_cat
+    }
 
 
 @app.get("/api/expenses/summary/kindergarten/{kg_id}")
-def get_kg_summary(kg_id: int, db: Session = Depends(get_db)):
+def get_kg_summary(kg_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get expense summary for a kindergarten (must be user's kindergarten)"""
+    if kg_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg = db.query(Kindergarten).filter(Kindergarten.id == kg_id).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+
     classes = db.query(Class).filter(Class.kindergarten_id == kg_id).all()
-    students = db.query(Student).filter(Student.class_id.in_([c.id for c in classes])).all()
-    expenses = db.query(Expense).filter(Expense.student_id.in_([s.id for s in students])).all()
+    class_ids = [c.id for c in classes]
+    students = db.query(Student).filter(Student.class_id.in_(class_ids)).all() if class_ids else []
+    student_ids = [s.id for s in students]
+    expenses = db.query(Expense).filter(Expense.student_id.in_(student_ids)).all() if student_ids else []
     by_cat = {}
     for e in expenses:
         by_cat[e.category] = by_cat.get(e.category, 0) + e.amount
-    return {"kindergarten_id": kg_id, "total": sum(e.amount for e in expenses), "by_category": by_cat}
+    return {
+        "kindergarten_id": kg_id,
+        "kindergarten_name": kg.name,
+        "class_count": len(classes),
+        "student_count": len(students),
+        "total": sum(e.amount for e in expenses),
+        "by_category": by_cat
+    }
 
 
 @app.get("/api/expenses/summary/student/{student_id}")
-def get_student_summary(student_id: int, db: Session = Depends(get_db)):
+def get_student_summary(student_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get expense summary for a student (must belong to user's kindergarten)"""
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+
+    # Verify student belongs to user's kindergarten
+    cls = db.query(Class).filter(Class.id == student.class_id).first()
+    if not cls or cls.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     expenses = db.query(Expense).filter(Expense.student_id == student_id).all()
     by_cat = {}
     for e in expenses:
@@ -462,3 +805,11 @@ def get_student_summary(student_id: int, db: Session = Depends(get_db)):
         "expense_count": len(expenses),
         "by_category": by_cat
     }
+
+
+@app.get("/api/expenses/summary/my")
+def get_my_summary(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get expense summary for current user's kindergarten"""
+    if not user.kindergarten_id:
+        return {"total": 0, "by_category": {}, "class_count": 0, "student_count": 0}
+    return get_kg_summary(user.kindergarten_id, db, user)

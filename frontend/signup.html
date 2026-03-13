@@ -48,17 +48,37 @@
                            placeholder="실명을 입력하세요">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="region">근무 지역 *</label>
-                        <input type="text" id="region" name="region" required
-                               placeholder="예: 서울시 강남구">
+                <div class="form-group">
+                    <label for="region">근무 지역 *</label>
+                    <input type="text" id="region" name="region" required
+                           placeholder="예: 서울시 강남구">
+                </div>
+
+                <div class="form-group">
+                    <label>유치원 선택 방법 *</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="kg_method" value="existing" id="kg-existing" checked>
+                            기존 유치원 선택
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="kg_method" value="new" id="kg-new">
+                            새 유치원 등록
+                        </label>
                     </div>
-                    <div class="form-group">
-                        <label for="kindergarten_name">유치원 이름 *</label>
-                        <input type="text" id="kindergarten_name" name="kindergarten_name" required
-                               placeholder="유치원 이름">
-                    </div>
+                </div>
+
+                <div id="existing-kg-section" class="form-group">
+                    <label for="kindergarten_id">유치원 선택 *</label>
+                    <select id="kindergarten_id" name="kindergarten_id">
+                        <option value="">유치원을 선택하세요</option>
+                    </select>
+                </div>
+
+                <div id="new-kg-section" class="form-group" style="display: none;">
+                    <label for="kindergarten_name">유치원 이름 *</label>
+                    <input type="text" id="kindergarten_name" name="kindergarten_name"
+                           placeholder="새로 등록할 유치원 이름">
                 </div>
 
                 <div class="form-group">
@@ -82,6 +102,42 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // Load kindergartens on page load
+        async function loadKindergartens() {
+            try {
+                const kindergartens = await api.getKindergartens();
+                const select = document.getElementById('kindergarten_id');
+                kindergartens.forEach(kg => {
+                    const option = document.createElement('option');
+                    option.value = kg.id;
+                    option.textContent = `${kg.name}${kg.region ? ' (' + kg.region + ')' : ''}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load kindergartens:', error);
+            }
+        }
+
+        // Toggle between existing and new kindergarten
+        document.querySelectorAll('input[name="kg_method"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const existingSection = document.getElementById('existing-kg-section');
+                const newSection = document.getElementById('new-kg-section');
+
+                if (e.target.value === 'existing') {
+                    existingSection.style.display = 'block';
+                    newSection.style.display = 'none';
+                    document.getElementById('kindergarten_id').required = true;
+                    document.getElementById('kindergarten_name').required = false;
+                } else {
+                    existingSection.style.display = 'none';
+                    newSection.style.display = 'block';
+                    document.getElementById('kindergarten_id').required = false;
+                    document.getElementById('kindergarten_name').required = true;
+                }
+            });
+        });
+
         document.getElementById('signup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -93,20 +149,40 @@
                 return;
             }
 
+            const kgMethod = document.querySelector('input[name="kg_method"]:checked').value;
+
             const data = {
                 username: document.getElementById('username').value,
                 email: document.getElementById('email').value,
                 password: password,
                 name: document.getElementById('name').value,
                 region: document.getElementById('region').value,
-                kindergarten_name: document.getElementById('kindergarten_name').value,
                 class_name: document.getElementById('class_name').value || '미정'
             };
+
+            if (kgMethod === 'existing') {
+                const kgId = document.getElementById('kindergarten_id').value;
+                if (!kgId) {
+                    document.getElementById('error-message').textContent = '유치원을 선택해주세요.';
+                    return;
+                }
+                data.kindergarten_id = parseInt(kgId);
+            } else {
+                const kgName = document.getElementById('kindergarten_name').value;
+                if (!kgName) {
+                    document.getElementById('error-message').textContent = '유치원 이름을 입력해주세요.';
+                    return;
+                }
+                data.kindergarten_name = kgName;
+            }
 
             await auth.signup(data);
         });
 
-        // 이미 로그인된 경우 메인으로 이동
+        // Initialize
+        loadKindergartens();
+
+        // Redirect if already logged in
         if (auth.isLoggedIn()) {
             window.location.href = 'index.html';
         }

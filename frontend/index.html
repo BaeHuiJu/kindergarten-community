@@ -122,12 +122,13 @@
         <section id="expenses-page" class="page">
             <div class="container">
                 <h2>비용 관리</h2>
+                <p id="my-kindergarten-info" class="info-text"></p>
 
                 <div class="expenses-tabs">
                     <button data-tab="input" class="tab active">비용 입력</button>
                     <button data-tab="student-summary" class="tab">학생별 집계</button>
                     <button data-tab="class-summary" class="tab">반별 집계</button>
-                    <button data-tab="kg-summary" class="tab">유치원별 집계</button>
+                    <button data-tab="kg-summary" class="tab">유치원 집계</button>
                 </div>
 
                 <!-- 비용 입력 탭 -->
@@ -137,25 +138,19 @@
                         <form id="expense-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="expense-kindergarten">유치원</label>
-                                    <select id="expense-kindergarten" required>
-                                        <option value="">선택하세요</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
                                     <label for="expense-class">반</label>
                                     <select id="expense-class" required>
                                         <option value="">선택하세요</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="expense-student">학생</label>
                                     <select id="expense-student" required>
                                         <option value="">선택하세요</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="expense-category">비용 카테고리</label>
                                     <select id="expense-category" required>
@@ -166,16 +161,14 @@
                                         <option value="준비물비">준비물비</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="expense-amount">금액 (원)</label>
                                     <input type="number" id="expense-amount" required min="0" step="1000">
                                 </div>
-                                <div class="form-group">
-                                    <label for="expense-description">설명</label>
-                                    <input type="text" id="expense-description" placeholder="비용 설명">
-                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-description">설명</label>
+                                <input type="text" id="expense-description" placeholder="비용 설명">
                             </div>
                             <button type="submit" class="btn btn-primary">비용 추가</button>
                         </form>
@@ -190,9 +183,6 @@
                 <!-- 학생별 집계 탭 -->
                 <div id="student-summary-tab" class="expense-tab">
                     <div class="summary-selector">
-                        <select id="student-summary-kindergarten">
-                            <option value="">유치원 선택</option>
-                        </select>
                         <select id="student-summary-class">
                             <option value="">반 선택</option>
                         </select>
@@ -207,9 +197,6 @@
                 <!-- 반별 집계 탭 -->
                 <div id="class-summary-tab" class="expense-tab">
                     <div class="summary-selector">
-                        <select id="summary-kindergarten">
-                            <option value="">유치원 선택</option>
-                        </select>
                         <select id="summary-class">
                             <option value="">반 선택</option>
                         </select>
@@ -221,10 +208,7 @@
                 <!-- 유치원별 집계 탭 -->
                 <div id="kg-summary-tab" class="expense-tab">
                     <div class="summary-selector">
-                        <select id="kg-summary-kindergarten">
-                            <option value="">유치원 선택</option>
-                        </select>
-                        <button id="load-kg-summary" class="btn btn-primary">조회</button>
+                        <button id="load-kg-summary" class="btn btn-primary">내 유치원 집계 조회</button>
                     </div>
                     <div id="kg-summary-result"></div>
                 </div>
