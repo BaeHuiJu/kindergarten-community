@@ -12,19 +12,25 @@ import bcrypt
 import os
 
 # Database setup
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./kindergarten.db"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    # Convert postgresql:// to postgresql+pg8000:// for pg8000 driver
-    if DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
-    engine = create_engine(DATABASE_URL)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+engine = None
+SessionLocal = None
+
+def get_engine():
+    global engine, SessionLocal
+    if engine is None:
+        DATABASE_URL = os.getenv("DATABASE_URL")
+        if not DATABASE_URL:
+            DATABASE_URL = "sqlite:///./kindergarten.db"
+            engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+        else:
+            # Convert postgresql:// to postgresql+pg8000:// for pg8000 driver
+            if DATABASE_URL.startswith("postgresql://"):
+                DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
+            engine = create_engine(DATABASE_URL)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
+    return engine
 
 
 # Models
@@ -109,12 +115,9 @@ class Expense(Base):
     student = relationship("Student", back_populates="expenses")
 
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-
 # Dependency
 def get_db():
+    get_engine()  # Ensure engine is initialized
     db = SessionLocal()
     try:
         yield db
