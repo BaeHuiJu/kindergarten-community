@@ -597,5 +597,6 @@ def get_kindergarten_summary(kindergarten_id: int, db: Session = Depends(get_db)
     }
 
 
-# Vercel handler
-handler = app
+# Vercel handler with Mangum for ASGI support
+from mangum import Mangum
+handler = Mangum(app)
