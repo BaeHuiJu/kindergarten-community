@@ -279,6 +279,19 @@ def health():
     return {"status": "healthy"}
 
 
+@app.get("/api/debug")
+def debug():
+    try:
+        get_engine()
+        db = SessionLocal()
+        # Try a simple query
+        result = db.execute("SELECT 1").fetchone()
+        db.close()
+        return {"status": "ok", "db_connected": True}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "db_url_set": bool(os.getenv("DATABASE_URL"))}
+
+
 @app.post("/api/auth/signup", response_model=Token)
 def signup(req: SignupRequest, db: Session = Depends(get_db)):
     if db.query(User).filter((User.username == req.username) | (User.email == req.email)).first():
