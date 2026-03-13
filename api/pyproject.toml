@@ -8,6 +8,6 @@ dependencies = [
     "pydantic",
     "python-jose[cryptography]",
     "bcrypt",
-    "pg8000",
+    "psycopg2-binary",
     "python-dotenv"
 ]
