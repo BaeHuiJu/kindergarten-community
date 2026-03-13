@@ -90,7 +90,12 @@ function setupEventListeners() {
             e.target.classList.add('active');
             const tabName = e.target.dataset.tab;
             document.querySelectorAll('.expense-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`${tabName.replace('-', '-')}-tab`).classList.add('active');
+            // Fix: 'input' tab의 실제 ID는 'expense-input-tab'
+            const tabId = tabName === 'input' ? 'expense-input-tab' : `${tabName}-tab`;
+            const tabEl = document.getElementById(tabId);
+            if (tabEl) {
+                tabEl.classList.add('active');
+            }
         });
     });
 
