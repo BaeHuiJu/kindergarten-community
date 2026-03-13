@@ -1,0 +1,13 @@
+[project]
+name = "kindergarten-api"
+version = "1.0.0"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi",
+    "sqlalchemy",
+    "pydantic",
+    "python-jose[cryptography]",
+    "bcrypt",
+    "pg8000",
+    "python-dotenv"
+]
