@@ -24,6 +24,8 @@ def get_engine():
             DATABASE_URL = "sqlite:///./kindergarten.db"
             engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
         else:
+            # Strip whitespace/newlines from URL
+            DATABASE_URL = DATABASE_URL.strip()
             engine = create_engine(DATABASE_URL)
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         Base.metadata.create_all(bind=engine)
