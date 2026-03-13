@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유치원 선생님 커뮤니티</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <h1>유치원 선생님 커뮤니티</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" data-page="home" class="active">홈</a></li>
+                <li><a href="#" data-page="board">게시판</a></li>
+                <li><a href="#" data-page="expenses">비용 관리</a></li>
+                <li><a href="#" data-page="profile">프로필</a></li>
+            </ul>
+            <div class="user-info">
+                <!-- 동적으로 로그인/로그아웃 버튼 표시 -->
+            </div>
+        </nav>
+    </header>
+
+    <main id="app">
+        <!-- 홈 페이지 -->
+        <section id="home-page" class="page active">
+            <div class="container">
+                <h2>환영합니다!</h2>
+                <p>유치원 선생님들을 위한 커뮤니티입니다.</p>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>총 게시글</h3>
+                        <p id="total-posts">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>총 회원</h3>
+                        <p id="total-users">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>총 유치원</h3>
+                        <p id="total-kindergartens">0</p>
+                    </div>
+                </div>
+
+                <div class="recent-posts">
+                    <h3>최근 게시글</h3>
+                    <div id="recent-posts-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 게시판 페이지 -->
+        <section id="board-page" class="page">
+            <div class="container">
+                <div class="board-header">
+                    <h2>게시판</h2>
+                    <button id="new-post-btn" class="btn btn-primary">새 글 쓰기</button>
+                </div>
+
+                <div class="category-tabs">
+                    <button data-category="" class="tab active">전체</button>
+                    <button data-category="자유게시판" class="tab">자유게시판</button>
+                    <button data-category="교육자료" class="tab">교육자료</button>
+                    <button data-category="Q&A" class="tab">Q&A</button>
+                </div>
+
+                <div id="posts-list" class="posts-list"></div>
+            </div>
+        </section>
+
+        <!-- 게시글 상세 페이지 -->
+        <section id="post-detail-page" class="page">
+            <div class="container">
+                <button id="back-to-board" class="btn btn-secondary">목록으로</button>
+                <div id="post-detail"></div>
+                <div id="comments-section">
+                    <h3>댓글</h3>
+                    <div id="comments-list"></div>
+                    <div class="comment-form">
+                        <textarea id="comment-content" placeholder="댓글을 입력하세요..."></textarea>
+                        <button id="submit-comment" class="btn btn-primary">댓글 작성</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 글 작성 페이지 -->
+        <section id="write-post-page" class="page">
+            <div class="container">
+                <h2 id="write-page-title">새 글 쓰기</h2>
+                <form id="post-form">
+                    <div class="form-group">
+                        <label for="post-category">카테고리</label>
+                        <select id="post-category" required>
+                            <option value="자유게시판">자유게시판</option>
+                            <option value="교육자료">교육자료</option>
+                            <option value="Q&A">Q&A</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="post-title">제목</label>
+                        <input type="text" id="post-title" required placeholder="제목을 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label for="post-content">내용</label>
+                        <textarea id="post-content" required placeholder="내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-post" class="btn btn-secondary">취소</button>
+                        <button type="submit" class="btn btn-primary">저장</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 비용 관리 페이지 -->
+        <section id="expenses-page" class="page">
+            <div class="container">
+                <h2>비용 관리</h2>
+
+                <div class="expenses-tabs">
+                    <button data-tab="input" class="tab active">비용 입력</button>
+                    <button data-tab="class-summary" class="tab">반별 집계</button>
+                    <button data-tab="kg-summary" class="tab">유치원별 집계</button>
+                </div>
+
+                <!-- 비용 입력 탭 -->
+                <div id="expense-input-tab" class="expense-tab active">
+                    <div class="expense-form-section">
+                        <h3>비용 입력</h3>
+                        <form id="expense-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="expense-kindergarten">유치원</label>
+                                    <select id="expense-kindergarten" required>
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="expense-class">반</label>
+                                    <select id="expense-class" required>
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="expense-student">학생</label>
+                                    <select id="expense-student" required>
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="expense-category">비용 카테고리</label>
+                                    <select id="expense-category" required>
+                                        <option value="교재비">교재비</option>
+                                        <option value="급식비">급식비</option>
+                                        <option value="현장학습비">현장학습비</option>
+                                        <option value="특별활동비">특별활동비</option>
+                                        <option value="준비물비">준비물비</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="expense-amount">금액 (원)</label>
+                                    <input type="number" id="expense-amount" required min="0" step="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label for="expense-description">설명</label>
+                                    <input type="text" id="expense-description" placeholder="비용 설명">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">비용 추가</button>
+                        </form>
+                    </div>
+
+                    <div class="expense-list-section">
+                        <h3>최근 비용 내역</h3>
+                        <div id="expense-list"></div>
+                    </div>
+                </div>
+
+                <!-- 반별 집계 탭 -->
+                <div id="class-summary-tab" class="expense-tab">
+                    <div class="summary-selector">
+                        <select id="summary-kindergarten">
+                            <option value="">유치원 선택</option>
+                        </select>
+                        <select id="summary-class">
+                            <option value="">반 선택</option>
+                        </select>
+                        <button id="load-class-summary" class="btn btn-primary">조회</button>
+                    </div>
+                    <div id="class-summary-result"></div>
+                </div>
+
+                <!-- 유치원별 집계 탭 -->
+                <div id="kg-summary-tab" class="expense-tab">
+                    <div class="summary-selector">
+                        <select id="kg-summary-kindergarten">
+                            <option value="">유치원 선택</option>
+                        </select>
+                        <button id="load-kg-summary" class="btn btn-primary">조회</button>
+                    </div>
+                    <div id="kg-summary-result"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 프로필 페이지 -->
+        <section id="profile-page" class="page">
+            <div class="container">
+                <h2>내 프로필</h2>
+                <div id="profile-content">
+                    <p>사용자를 선택해주세요.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>2024 유치원 선생님 커뮤니티 MVP</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

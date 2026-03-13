@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비용 입력 - 유치원 선생님 커뮤니티</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/cost.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <a href="index.html"><h1>유치원 선생님 커뮤니티</h1></a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">홈</a></li>
+                <li><a href="index.html#board">게시판</a></li>
+                <li><a href="cost-input.html" class="active">비용 입력</a></li>
+                <li><a href="cost-records.html">비용 내역</a></li>
+            </ul>
+            <div class="user-info"></div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="page-header">
+                <h2>비용 입력</h2>
+                <p>유치원생별 비용을 입력하세요</p>
+            </div>
+
+            <div class="cost-input-section">
+                <form id="cost-form" class="cost-form">
+                    <!-- Step 1: 유치원 선택 -->
+                    <div class="form-step">
+                        <div class="step-header">
+                            <span class="step-number">1</span>
+                            <span class="step-title">유치원 선택</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="kindergarten-select">유치원</label>
+                            <select id="kindergarten-select" required>
+                                <option value="">유치원을 선택하세요</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: 반 선택 -->
+                    <div class="form-step">
+                        <div class="step-header">
+                            <span class="step-number">2</span>
+                            <span class="step-title">반 선택</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="class-select">반</label>
+                            <select id="class-select" required disabled>
+                                <option value="">반을 선택하세요</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: 학생 선택 -->
+                    <div class="form-step">
+                        <div class="step-header">
+                            <span class="step-number">3</span>
+                            <span class="step-title">학생 선택</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="student-select">학생</label>
+                            <select id="student-select" required disabled>
+                                <option value="">학생을 선택하세요</option>
+                            </select>
+                        </div>
+                        <div id="student-info" class="student-info hidden"></div>
+                    </div>
+
+                    <!-- Step 4: 비용 정보 입력 -->
+                    <div class="form-step">
+                        <div class="step-header">
+                            <span class="step-number">4</span>
+                            <span class="step-title">비용 정보</span>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cost-category">비용 항목</label>
+                                <select id="cost-category" required>
+                                    <option value="">항목을 선택하세요</option>
+                                    <option value="교재비">교재비</option>
+                                    <option value="급식비">급식비</option>
+                                    <option value="현장학습비">현장학습비</option>
+                                    <option value="특별활동비">특별활동비</option>
+                                    <option value="준비물비">준비물비</option>
+                                    <option value="기타">기타</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cost-amount">금액</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="cost-amount" required min="0" step="100" placeholder="0">
+                                    <span class="unit">원</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="cost-description">설명 (선택)</label>
+                            <input type="text" id="cost-description" placeholder="비용에 대한 설명을 입력하세요">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+                        <button type="submit" class="btn btn-primary">비용 저장</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 최근 입력 내역 -->
+            <div class="recent-entries">
+                <h3>최근 입력 내역</h3>
+                <div id="recent-list" class="recent-list">
+                    <p class="empty-message">입력된 비용이 없습니다.</p>
+                </div>
+                <div class="view-all">
+                    <a href="cost-records.html" class="btn btn-secondary">전체 내역 보기</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>2024 유치원 선생님 커뮤니티 MVP</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/cost.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.updateNavbar();
+            initCostInput();
+        });
+    </script>
+</body>
+</html>

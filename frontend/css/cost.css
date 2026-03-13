@@ -1,0 +1,414 @@
+/* Cost Pages Styles */
+
+/* Page Header */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h2 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* Cost Input Form */
+.cost-input-section {
+    margin-bottom: 2rem;
+}
+
+.cost-form {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.form-step {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.step-title {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Input with unit */
+.input-with-unit {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-unit input {
+    padding-right: 40px;
+    text-align: right;
+}
+
+.input-with-unit .unit {
+    position: absolute;
+    right: 12px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Student Info Card */
+.student-info {
+    background: #e8f4fd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.student-info.hidden {
+    display: none;
+}
+
+.student-avatar {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.student-details h4 {
+    margin: 0 0 0.25rem 0;
+    color: #333;
+}
+
+.student-details p {
+    margin: 0;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+/* Recent Entries */
+.recent-entries {
+    margin-top: 2rem;
+}
+
+.recent-entries h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.recent-list {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.recent-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+}
+
+.recent-item:last-child {
+    margin-bottom: 0;
+}
+
+.recent-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.recent-item-title {
+    font-weight: 500;
+    color: #333;
+}
+
+.recent-item-meta {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.recent-item-amount {
+    font-weight: bold;
+    color: #667eea;
+    font-size: 1.1rem;
+}
+
+.view-all {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.empty-message {
+    text-align: center;
+    color: #999;
+    padding: 2rem;
+}
+
+/* Filter Section */
+.filter-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #666;
+}
+
+.filter-group select {
+    padding: 0.6rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Summary Section */
+.summary-section {
+    margin-bottom: 1.5rem;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-around;
+    color: white;
+}
+
+.summary-item {
+    text-align: center;
+}
+
+.summary-label {
+    display: block;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.summary-value.highlight {
+    font-size: 1.8rem;
+}
+
+/* Records Table */
+.records-section {
+    overflow-x: auto;
+}
+
+.records-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.records-table th,
+.records-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.records-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.records-table td {
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.records-table tr:hover {
+    background: #f8f9fa;
+}
+
+.records-table .amount {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.records-table .category-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #e8eaf6;
+    color: #667eea;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.records-table .empty-row td {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+}
+
+.records-table .action-btn {
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.records-table .delete-btn {
+    background: #fee;
+    color: #e74c3c;
+}
+
+.records-table .delete-btn:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.pagination button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination button:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.pagination button.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Bottom Actions */
+.bottom-actions {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+/* Logo Link */
+.logo a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.logo a h1 {
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .summary-card {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .records-table th,
+    .records-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .form-step {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
+        flex-direction: column;
+    }
+
+    .filter-actions .btn {
+        width: 100%;
+    }
+}

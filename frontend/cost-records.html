@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비용 내역 - 유치원 선생님 커뮤니티</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/cost.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <a href="index.html"><h1>유치원 선생님 커뮤니티</h1></a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">홈</a></li>
+                <li><a href="index.html#board">게시판</a></li>
+                <li><a href="cost-input.html">비용 입력</a></li>
+                <li><a href="cost-records.html" class="active">비용 내역</a></li>
+            </ul>
+            <div class="user-info"></div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="page-header">
+                <h2>비용 내역 조회</h2>
+                <p>입력된 비용 내역을 확인하세요</p>
+            </div>
+
+            <!-- 필터 섹션 -->
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="filter-kindergarten">유치원</label>
+                        <select id="filter-kindergarten">
+                            <option value="">전체</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-class">반</label>
+                        <select id="filter-class">
+                            <option value="">전체</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-student">학생</label>
+                        <select id="filter-student">
+                            <option value="">전체</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-category">항목</label>
+                        <select id="filter-category">
+                            <option value="">전체</option>
+                            <option value="교재비">교재비</option>
+                            <option value="급식비">급식비</option>
+                            <option value="현장학습비">현장학습비</option>
+                            <option value="특별활동비">특별활동비</option>
+                            <option value="준비물비">준비물비</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-secondary" onclick="resetFilters()">필터 초기화</button>
+                    <button type="button" class="btn btn-primary" onclick="applyFilters()">조회</button>
+                </div>
+            </div>
+
+            <!-- 요약 정보 -->
+            <div class="summary-section">
+                <div class="summary-card">
+                    <div class="summary-item">
+                        <span class="summary-label">총 건수</span>
+                        <span class="summary-value" id="total-count">0건</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">총 금액</span>
+                        <span class="summary-value highlight" id="total-amount">0원</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 비용 내역 테이블 -->
+            <div class="records-section">
+                <table class="records-table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>유치원</th>
+                            <th>반</th>
+                            <th>학생</th>
+                            <th>항목</th>
+                            <th>금액</th>
+                            <th>설명</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-tbody">
+                        <tr class="empty-row">
+                            <td colspan="8">비용 내역이 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="pagination" id="pagination"></div>
+
+            <!-- 하단 액션 -->
+            <div class="bottom-actions">
+                <a href="cost-input.html" class="btn btn-primary">새 비용 입력</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>2024 유치원 선생님 커뮤니티 MVP</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/cost.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.updateNavbar();
+            initCostRecords();
+        });
+    </script>
+</body>
+</html>

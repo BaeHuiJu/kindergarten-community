@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - 유치원 선생님 커뮤니티</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="auth-card signup-card">
+            <div class="auth-header">
+                <h1>회원가입</h1>
+                <p>유치원 선생님 커뮤니티에 가입하세요</p>
+            </div>
+
+            <form id="signup-form" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="username">아이디 *</label>
+                        <input type="text" id="username" name="username" required
+                               placeholder="영문, 숫자 조합">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">이메일 *</label>
+                        <input type="email" id="email" name="email" required
+                               placeholder="example@email.com">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="password">비밀번호 *</label>
+                        <input type="password" id="password" name="password" required
+                               placeholder="6자 이상" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="password-confirm">비밀번호 확인 *</label>
+                        <input type="password" id="password-confirm" name="password-confirm" required
+                               placeholder="비밀번호 재입력">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">이름 *</label>
+                    <input type="text" id="name" name="name" required
+                           placeholder="실명을 입력하세요">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="region">근무 지역 *</label>
+                        <input type="text" id="region" name="region" required
+                               placeholder="예: 서울시 강남구">
+                    </div>
+                    <div class="form-group">
+                        <label for="kindergarten_name">유치원 이름 *</label>
+                        <input type="text" id="kindergarten_name" name="kindergarten_name" required
+                               placeholder="유치원 이름">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="class_name">담당 반</label>
+                    <input type="text" id="class_name" name="class_name"
+                           placeholder="예: 햇님반">
+                </div>
+
+                <div id="error-message" class="error-message"></div>
+
+                <button type="submit" class="btn btn-primary btn-full">가입하기</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>이미 회원이신가요?</p>
+                <a href="login.html" class="link">로그인</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password-confirm').value;
+
+            if (password !== passwordConfirm) {
+                document.getElementById('error-message').textContent = '비밀번호가 일치하지 않습니다.';
+                return;
+            }
+
+            const data = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: password,
+                name: document.getElementById('name').value,
+                region: document.getElementById('region').value,
+                kindergarten_name: document.getElementById('kindergarten_name').value,
+                class_name: document.getElementById('class_name').value || '미정'
+            };
+
+            await auth.signup(data);
+        });
+
+        // 이미 로그인된 경우 메인으로 이동
+        if (auth.isLoggedIn()) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
