@@ -348,26 +348,35 @@ def migrate(db: Session = Depends(get_db)):
     from sqlalchemy import text
     migrations = []
 
+    # Check and add kindergarten_id to users table
     try:
-        # Check and add kindergarten_id to users table
+        db.execute(text("SELECT kindergarten_id FROM users LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
         try:
-            db.execute(text("SELECT kindergarten_id FROM users LIMIT 1"))
-        except:
             db.execute(text("ALTER TABLE users ADD COLUMN kindergarten_id INTEGER REFERENCES kindergartens(id)"))
             db.commit()
             migrations.append("Added kindergarten_id to users")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"users.kindergarten_id error: {str(e2)}")
 
-        # Check and add kindergarten_id to posts table
+    # Check and add kindergarten_id to posts table
+    try:
+        db.execute(text("SELECT kindergarten_id FROM posts LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
         try:
-            db.execute(text("SELECT kindergarten_id FROM posts LIMIT 1"))
-        except:
             db.execute(text("ALTER TABLE posts ADD COLUMN kindergarten_id INTEGER REFERENCES kindergartens(id)"))
             db.commit()
             migrations.append("Added kindergarten_id to posts")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"posts.kindergarten_id error: {str(e2)}")
 
-        return {"status": "success", "migrations": migrations}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    return {"status": "success", "migrations": migrations}
 
 
 # ==================== AUTH ====================
