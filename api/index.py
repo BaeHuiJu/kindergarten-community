@@ -342,6 +342,34 @@ def health():
     return {"status": "healthy"}
 
 
+@app.get("/api/migrate")
+def migrate(db: Session = Depends(get_db)):
+    """Run database migrations to add missing columns"""
+    from sqlalchemy import text
+    migrations = []
+
+    try:
+        # Check and add kindergarten_id to users table
+        try:
+            db.execute(text("SELECT kindergarten_id FROM users LIMIT 1"))
+        except:
+            db.execute(text("ALTER TABLE users ADD COLUMN kindergarten_id INTEGER REFERENCES kindergartens(id)"))
+            db.commit()
+            migrations.append("Added kindergarten_id to users")
+
+        # Check and add kindergarten_id to posts table
+        try:
+            db.execute(text("SELECT kindergarten_id FROM posts LIMIT 1"))
+        except:
+            db.execute(text("ALTER TABLE posts ADD COLUMN kindergarten_id INTEGER REFERENCES kindergartens(id)"))
+            db.commit()
+            migrations.append("Added kindergarten_id to posts")
+
+        return {"status": "success", "migrations": migrations}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 # ==================== AUTH ====================
 
 @app.post("/api/auth/signup", response_model=Token)
