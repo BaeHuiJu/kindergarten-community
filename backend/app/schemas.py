@@ -176,6 +176,24 @@ class Expense(ExpenseBase):
         from_attributes = True
 
 
+# ExpenseCategory Schemas
+class ExpenseCategoryBase(BaseModel):
+    name: str
+    kindergarten_id: int
+
+
+class ExpenseCategoryCreate(ExpenseCategoryBase):
+    pass
+
+
+class ExpenseCategory(ExpenseCategoryBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Summary Schemas
 class ClassExpenseSummary(BaseModel):
     class_id: int

@@ -1,6 +1,6 @@
 // Detect environment and set API base URL
 const API_BASE = window.location.hostname === 'localhost'
-    ? 'http://localhost:8001/api'
+    ? 'http://localhost:8888/api'
     : '/api';
 
 const api = {
@@ -121,6 +121,23 @@ const api = {
         return res.json();
     },
 
+    async createKindergarten(data) {
+        const res = await fetch(`${API_BASE}/students/kindergartens/`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    async deleteKindergarten(id) {
+        const res = await fetch(`${API_BASE}/students/kindergartens/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
     async getMyKindergarten() {
         const res = await fetch(`${API_BASE}/kindergartens/my`, {
             headers: this.getAuthHeaders()
@@ -138,15 +155,8 @@ const api = {
         return res.json();
     },
 
-    async getMyClasses() {
-        const res = await fetch(`${API_BASE}/classes/my`, {
-            headers: this.getAuthHeaders()
-        });
-        return res.json();
-    },
-
     async createClass(data) {
-        const res = await fetch(`${API_BASE}/classes/`, {
+        const res = await fetch(`${API_BASE}/students/classes/`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
@@ -155,8 +165,15 @@ const api = {
     },
 
     async deleteClass(id) {
-        const res = await fetch(`${API_BASE}/classes/${id}`, {
+        const res = await fetch(`${API_BASE}/students/classes/${id}`, {
             method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async getMyClasses() {
+        const res = await fetch(`${API_BASE}/classes/my`, {
             headers: this.getAuthHeaders()
         });
         return res.json();
@@ -256,5 +273,55 @@ const api = {
             headers: this.getAuthHeaders()
         });
         return res.json();
+    },
+
+    // Expense Categories
+    async getExpenseCategories(kindergartenId = null) {
+        let url = `${API_BASE}/expenses/categories/`;
+        if (kindergartenId) url += `?kindergarten_id=${kindergartenId}`;
+        const res = await fetch(url, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async createExpenseCategory(data) {
+        const res = await fetch(`${API_BASE}/expenses/categories/`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    async deleteExpenseCategory(id) {
+        const res = await fetch(`${API_BASE}/expenses/categories/${id}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    // Excel Upload
+    async uploadExcel(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const token = localStorage.getItem('kindergarten_token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`${API_BASE}/students/upload/excel`, {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+        return res.json();
+    },
+
+    getTemplateDownloadUrl() {
+        return `${API_BASE}/students/template/download`;
     }
 };

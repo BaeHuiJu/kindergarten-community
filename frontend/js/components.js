@@ -129,7 +129,50 @@ const components = {
         `;
     },
 
-    profileCard(user) {
+    profileCard(user, editMode = false) {
+        if (editMode) {
+            return `
+                <div class="profile-card">
+                    <h3>${user.name} 선생님 - 프로필 수정</h3>
+                    <form id="profile-edit-form" class="profile-info">
+                        <div class="info-item">
+                            <span class="label">아이디</span>
+                            <span>${user.username}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">이메일</span>
+                            <span>${user.email}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">이름</span>
+                            <input type="text" id="edit-name" value="${user.name}" required>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">근무 지역</span>
+                            <input type="text" id="edit-region" value="${user.region || ''}" placeholder="예: 서울시 강남구">
+                        </div>
+                        <div class="info-item">
+                            <span class="label">유치원</span>
+                            <select id="edit-kindergarten">
+                                <option value="">직접 입력</option>
+                            </select>
+                            <input type="text" id="edit-kindergarten-name" value="${user.kindergarten_name || ''}" placeholder="유치원명">
+                        </div>
+                        <div class="info-item">
+                            <span class="label">담당 반</span>
+                            <select id="edit-class">
+                                <option value="">직접 입력</option>
+                            </select>
+                            <input type="text" id="edit-class-name" value="${user.class_name || ''}" placeholder="반 이름">
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="cancel-profile-edit" class="btn btn-secondary">취소</button>
+                            <button type="submit" class="btn btn-primary">저장</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
         return `
             <div class="profile-card">
                 <h3>${user.name} 선생님</h3>
@@ -144,20 +187,23 @@ const components = {
                     </div>
                     <div class="info-item">
                         <span class="label">근무 지역</span>
-                        <span>${user.region}</span>
+                        <span>${user.region || '-'}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">유치원</span>
-                        <span>${user.kindergarten_name}</span>
+                        <span>${user.kindergarten_name || '-'}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">담당 반</span>
-                        <span>${user.class_name}</span>
+                        <span>${user.class_name || '-'}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">가입일</span>
                         <span>${this.formatDate(user.created_at)}</span>
                     </div>
+                </div>
+                <div class="form-actions" style="margin-top: 1rem;">
+                    <button id="edit-profile-btn" class="btn btn-primary">프로필 수정</button>
                 </div>
             </div>
         `;

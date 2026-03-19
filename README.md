@@ -4,9 +4,13 @@
 
 ## 기능
 
+- **JWT 인증 시스템**: 회원가입, 로그인, 로그아웃 + JWT 토큰 기반 인증
 - **게시판/댓글 CRUD**: 자유게시판, 교육자료, Q&A 카테고리별 게시글 작성/조회/수정/삭제
 - **사용자 프로필**: 근무 지역, 소속 유치원, 담당 반 정보 관리
+- **학생 관리**: 유치원/반/학생 직접 등록/삭제 기능
+- **엑셀 업로드**: 엑셀 템플릿 다운로드 및 일괄 등록
 - **유치원생별 비용 입력**: 교재비, 급식비, 현장학습비 등 비용 기록
+- **비용 카테고리 관리**: 유치원별 사용자 정의 카테고리 추가/삭제
 - **반별/유치원별 집계**: 카테고리별 비용 현황 조회
 - **더미 데이터**: 테스트용 샘플 데이터 포함
 
@@ -35,6 +39,7 @@ kindergarten-community/
 │   │   ├── database.py      # DB 연결 설정
 │   │   ├── schemas.py       # Pydantic 스키마
 │   │   └── routers/         # API 라우터
+│   │       ├── auth.py       # 인증 (JWT)
 │   │       ├── users.py
 │   │       ├── posts.py
 │   │       ├── comments.py
@@ -118,6 +123,12 @@ python -m http.server 3000
 
 ## API 엔드포인트
 
+### Auth (인증)
+- `POST /api/auth/signup` - 회원가입 (JWT 토큰 반환)
+- `POST /api/auth/login` - 로그인 (JWT 토큰 반환)
+- `GET /api/auth/me` - 현재 로그인된 사용자 정보 조회
+- `POST /api/auth/logout` - 로그아웃
+
 ### Users
 - `GET /api/users/` - 전체 사용자 조회
 - `POST /api/users/` - 사용자 생성
@@ -137,11 +148,27 @@ python -m http.server 3000
 - `POST /api/comments/` - 댓글 작성
 - `DELETE /api/comments/{id}` - 댓글 삭제
 
-### Students & Expenses
+### Students (학생 관리)
 - `GET /api/students/kindergartens/` - 유치원 목록
+- `POST /api/students/kindergartens/` - 유치원 등록
+- `DELETE /api/students/kindergartens/{id}` - 유치원 삭제
 - `GET /api/students/classes/` - 반 목록
+- `POST /api/students/classes/` - 반 등록
+- `DELETE /api/students/classes/{id}` - 반 삭제
 - `GET /api/students/` - 학생 목록
+- `POST /api/students/` - 학생 등록
+- `DELETE /api/students/{id}` - 학생 삭제
+- `GET /api/students/template/download` - 엑셀 템플릿 다운로드
+- `POST /api/students/upload/excel` - 엑셀 파일로 일괄 등록
+
+### Expenses (비용 관리)
 - `POST /api/expenses/` - 비용 입력
+- `GET /api/expenses/` - 비용 목록
+- `DELETE /api/expenses/{id}` - 비용 삭제
+- `GET /api/expenses/categories/` - 비용 카테고리 목록 (유치원 필터 가능)
+- `POST /api/expenses/categories/` - 비용 카테고리 추가
+- `DELETE /api/expenses/categories/{id}` - 비용 카테고리 삭제
+- `GET /api/expenses/summary/student/{id}` - 학생별 집계
 - `GET /api/expenses/summary/class/{id}` - 반별 집계
 - `GET /api/expenses/summary/kindergarten/{id}` - 유치원별 집계
 
@@ -167,25 +194,53 @@ MIT License
    frontend/ → 폴더 구조 생성, Live Server 실행 확인
    api.js   → BASE_URL, apiFetch 기본 함수 작성
 
-✅ 2단계 — 인증 (1일)
-   백엔드: auth.py 라우터 + JWT 발급 + users.json 더미
-   프론트: login.html / signup.html + auth.js
-   확인: 로그인 → JWT 저장 → /me 호출 성공
+✅ 2단계 — 인증 (1일) [완료: 2026-03-19]
+   백엔드: auth.py 라우터 + JWT 발급 (python-jose, bcrypt)
+   - /api/auth/signup: 회원가입 + JWT 토큰 반환
+   - /api/auth/login: 로그인 + JWT 토큰 반환
+   - /api/auth/me: 현재 사용자 정보 조회
+   - /api/auth/logout: 로그아웃
+   프론트: login.html / signup.html + auth.js + auth.css
+   - localStorage 기반 토큰 저장
+   - 테스트 계정 버튼 (데모용)
+   - 인증 필요 페이지 체크 (requireAuth)
+   확인: 로그인 → JWT 저장 → /me 호출 성공 ✓
 
-✅ 3단계 — 게시판 (1.5일)
-   백엔드: posts.py + comments.py 라우터 + 더미 JSON
-   프론트: board.html + post-detail.html + post-write.html
-   확인: 목록 조회 → 상세 → 작성 → 댓글 → 좋아요
+✅ 3단계 — 게시판 (1.5일) [완료: 2026-03-19]
+   백엔드: posts.py + comments.py 라우터
+   - /api/posts/: 게시글 CRUD (목록, 상세, 작성, 수정, 삭제)
+   - /api/posts/category/{category}: 카테고리별 필터
+   - /api/posts/search/{keyword}: 검색 기능
+   - /api/comments/: 댓글 CRUD
+   - /api/comments/post/{post_id}: 게시글별 댓글 조회
+   프론트: SPA (Single Page Application) 형태로 index.html에 통합
+   - board-page: 게시판 목록 (카테고리 탭: 전체/자유게시판/교육자료/Q&A)
+   - post-detail-page: 게시글 상세 + 댓글
+   - write-post-page: 글 작성/수정
+   - components.js: postCard, postDetail, comment 컴포넌트
+   확인: 목록 조회 → 상세 → 작성 → 수정 → 삭제 → 댓글 ✓
 
-✅ 4단계 — 비용 입력 (1.5일)
-   백엔드: cost.py 라우터 + 더미 JSON (kindergartens~cost_records)
-   프론트: cost-input.html + cost-records.html
-   확인: 유치원→반→학생 선택 → 항목 입력 → 저장 → 내역 조회
+✅ 4단계 — 비용 입력 (1.5일) [완료: 2026-03-19]
+   백엔드: students.py + expenses.py 라우터
+   - /api/students/kindergartens/: 유치원 CRUD
+   - /api/students/classes/: 반 CRUD
+   - /api/students/: 학생 CRUD
+   - /api/expenses/: 비용 CRUD
+   - /api/expenses/student/{student_id}: 학생별 비용 조회
+   프론트: SPA 형태로 index.html expenses-page에 통합
+   - expense-input-tab: 비용 입력 폼 (반→학생 연동 선택)
+   - expense-list: 최근 비용 내역
+   확인: 유치원→반→학생 선택 → 항목 입력 → 저장 → 내역 조회 ✓
 
-✅ 5단계 — 비용 집계 (1일)
-   백엔드: cost_service.py 집계 로직 + /summary 엔드포인트
-   프론트: cost-summary.html + cost-summary.js
-   확인: 반별 집계 탭 / 유치원별 집계 탭 / 기간 필터
+✅ 5단계 — 비용 집계 (1일) [완료: 2026-03-19]
+   백엔드: expenses.py에 summary 엔드포인트 포함
+   - /api/expenses/summary/class/{class_id}: 반별 집계
+   - /api/expenses/summary/kindergarten/{kindergarten_id}: 유치원별 집계
+   프론트: expenses-page에 탭 형태로 통합
+   - student-summary-tab: 학생별 집계
+   - class-summary-tab: 반별 집계
+   - kg-summary-tab: 유치원별 집계
+   확인: 반별 집계 / 유치원별 집계 ✓
 
 ✅ 6단계 — 프로필 (0.5일)
    백엔드: users.py PATCH 엔드포인트
@@ -197,4 +252,28 @@ MIT License
    공통 NavBar/BottomNav 동작 확인
    에러 메시지, 로딩 상태 처리
 
-예상 총 개발 기간: 약 7일 (1인 기준 MVP 완성)
+✅ 8단계 — 학생 관리 (1일) [완료: 2026-03-19]
+   백엔드: students.py에 관리 기능 추가
+   - /api/students/kindergartens/: 유치원 등록/삭제
+   - /api/students/classes/: 반 등록/삭제
+   - /api/students/: 학생 등록/삭제
+   - /api/students/template/download: 엑셀 템플릿 다운로드
+   - /api/students/upload/excel: 엑셀 일괄 업로드
+   프론트: management-page 추가
+   - kindergartens-tab: 유치원 등록/목록/삭제
+   - classes-tab: 반 등록/목록/삭제
+   - students-tab: 학생 등록/목록/삭제
+   - Excel 업로드 모달: 템플릿 다운로드, 파일 업로드
+   확인: 유치원/반/학생 등록 → 목록 조회 → 삭제 → 엑셀 업로드 ✓
+
+✅ 9단계 — 비용 카테고리 관리 (0.5일) [완료: 2026-03-19]
+   백엔드: models.py + schemas.py + expenses.py
+   - ExpenseCategory 모델 추가 (유치원별 카테고리)
+   - /api/expenses/categories/: 카테고리 CRUD
+   프론트: expenses-page에 카테고리 관리 탭 추가
+   - category-manage-tab: 카테고리 추가/목록/삭제
+   - 기본 카테고리(교재비, 급식비 등) + 사용자 정의 카테고리 지원
+   - 비용 입력 시 동적으로 카테고리 목록 로드
+   확인: 카테고리 추가 → 목록 조회 → 비용 입력에서 선택 가능 ✓
+
+예상 총 개발 기간: 약 8.5일 (1인 기준 MVP 완성)

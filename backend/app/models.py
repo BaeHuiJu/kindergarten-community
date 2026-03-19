@@ -94,3 +94,14 @@ class Expense(Base):
     date = Column(DateTime, default=datetime.utcnow)
 
     student = relationship("Student", back_populates="expenses")
+
+
+class ExpenseCategory(Base):
+    __tablename__ = "expense_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50))  # 카테고리명
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    kindergarten = relationship("Kindergarten")

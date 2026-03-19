@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유치원 선생님 커뮤니티</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/auth.css?v=3">
 </head>
 <body>
     <header>
@@ -16,6 +16,7 @@
             <ul class="nav-links">
                 <li><a href="#" data-page="home" class="active">홈</a></li>
                 <li><a href="#" data-page="board">게시판</a></li>
+                <li><a href="#" data-page="management">학생 관리</a></li>
                 <li><a href="#" data-page="expenses">비용 관리</a></li>
                 <li><a href="#" data-page="profile">프로필</a></li>
             </ul>
@@ -126,6 +127,7 @@
 
                 <div class="expenses-tabs">
                     <button data-tab="input" class="tab active">비용 입력</button>
+                    <button data-tab="category-manage" class="tab">카테고리 관리</button>
                     <button data-tab="student-summary" class="tab">학생별 집계</button>
                     <button data-tab="class-summary" class="tab">반별 집계</button>
                     <button data-tab="kg-summary" class="tab">유치원 집계</button>
@@ -154,11 +156,7 @@
                                 <div class="form-group">
                                     <label for="expense-category">비용 카테고리</label>
                                     <select id="expense-category" required>
-                                        <option value="교재비">교재비</option>
-                                        <option value="급식비">급식비</option>
-                                        <option value="현장학습비">현장학습비</option>
-                                        <option value="특별활동비">특별활동비</option>
-                                        <option value="준비물비">준비물비</option>
+                                        <option value="">선택하세요</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -177,6 +175,29 @@
                     <div class="expense-list-section">
                         <h3>최근 비용 내역</h3>
                         <div id="expense-list"></div>
+                    </div>
+                </div>
+
+                <!-- 카테고리 관리 탭 -->
+                <div id="category-manage-tab" class="expense-tab">
+                    <div class="add-form-section">
+                        <h3>카테고리 추가</h3>
+                        <form id="add-category-form" class="inline-form">
+                            <select id="category-kindergarten" required>
+                                <option value="">유치원 선택</option>
+                            </select>
+                            <input type="text" id="category-name" placeholder="카테고리명 (예: 교재비)" required>
+                            <button type="submit" class="btn btn-primary">추가</button>
+                        </form>
+                    </div>
+                    <div class="list-section">
+                        <h3>카테고리 목록</h3>
+                        <div class="filter-row">
+                            <select id="filter-kg-for-category">
+                                <option value="">전체 유치원</option>
+                            </select>
+                        </div>
+                        <div id="category-list" class="data-list"></div>
                     </div>
                 </div>
 
@@ -215,6 +236,114 @@
             </div>
         </section>
 
+        <!-- 학생 관리 페이지 -->
+        <section id="management-page" class="page">
+            <div class="container">
+                <div class="board-header">
+                    <h2>학생 관리</h2>
+                    <div class="header-actions">
+                        <a href="#" id="download-template" class="btn btn-secondary">엑셀 템플릿 다운로드</a>
+                        <button id="upload-excel-btn" class="btn btn-primary">엑셀 업로드</button>
+                    </div>
+                </div>
+
+                <!-- 엑셀 업로드 모달 -->
+                <div id="excel-upload-modal" class="modal" style="display:none;">
+                    <div class="modal-content">
+                        <span class="modal-close">&times;</span>
+                        <h3>엑셀 파일 업로드</h3>
+                        <p class="modal-info">템플릿 형식에 맞는 엑셀 파일을 업로드하세요.</p>
+                        <form id="excel-upload-form">
+                            <div class="form-group">
+                                <input type="file" id="excel-file" accept=".xlsx,.xls" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancel-upload">취소</button>
+                                <button type="submit" class="btn btn-primary">업로드</button>
+                            </div>
+                        </form>
+                        <div id="upload-result" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="management-tabs">
+                    <button data-tab="kindergartens" class="tab active">유치원</button>
+                    <button data-tab="classes" class="tab">반</button>
+                    <button data-tab="students" class="tab">학생</button>
+                </div>
+
+                <!-- 유치원 탭 -->
+                <div id="kindergartens-tab" class="management-tab active">
+                    <div class="add-form-section">
+                        <h3>유치원 등록</h3>
+                        <form id="add-kindergarten-form" class="inline-form">
+                            <input type="text" id="kg-name" placeholder="유치원명" required>
+                            <input type="text" id="kg-region" placeholder="지역 (예: 서울시 강남구)">
+                            <input type="text" id="kg-address" placeholder="주소">
+                            <button type="submit" class="btn btn-primary">등록</button>
+                        </form>
+                    </div>
+                    <div class="list-section">
+                        <h3>유치원 목록</h3>
+                        <div id="kindergartens-list" class="data-list"></div>
+                    </div>
+                </div>
+
+                <!-- 반 탭 -->
+                <div id="classes-tab" class="management-tab" style="display:none;">
+                    <div class="add-form-section">
+                        <h3>반 등록</h3>
+                        <form id="add-class-form" class="inline-form">
+                            <select id="class-kindergarten" required>
+                                <option value="">유치원 선택</option>
+                            </select>
+                            <input type="text" id="class-name" placeholder="반 이름" required>
+                            <button type="submit" class="btn btn-primary">등록</button>
+                        </form>
+                    </div>
+                    <div class="list-section">
+                        <h3>반 목록</h3>
+                        <div class="filter-row">
+                            <select id="filter-kg-for-class">
+                                <option value="">전체 유치원</option>
+                            </select>
+                        </div>
+                        <div id="classes-list" class="data-list"></div>
+                    </div>
+                </div>
+
+                <!-- 학생 탭 -->
+                <div id="students-tab" class="management-tab" style="display:none;">
+                    <div class="add-form-section">
+                        <h3>학생 등록</h3>
+                        <form id="add-student-form" class="inline-form">
+                            <select id="student-kindergarten" required>
+                                <option value="">유치원 선택</option>
+                            </select>
+                            <select id="student-class" required>
+                                <option value="">반 선택</option>
+                            </select>
+                            <input type="text" id="student-name" placeholder="학생 이름" required>
+                            <input type="number" id="student-age" placeholder="나이" min="1" max="10" value="5">
+                            <button type="submit" class="btn btn-primary">등록</button>
+                        </form>
+                    </div>
+                    <div class="list-section">
+                        <h3>학생 목록</h3>
+                        <div class="filter-row">
+                            <select id="filter-kg-for-student">
+                                <option value="">전체 유치원</option>
+                            </select>
+                            <select id="filter-class-for-student">
+                                <option value="">전체 반</option>
+                            </select>
+                        </div>
+                        <div id="students-list" class="data-list"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 프로필 페이지 -->
         <section id="profile-page" class="page">
             <div class="container">
@@ -230,9 +359,9 @@
         <p>2024 유치원 선생님 커뮤니티 MVP</p>
     </footer>
 
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/api.js?v=3"></script>
+    <script src="js/auth.js?v=3"></script>
+    <script src="js/components.js?v=3"></script>
+    <script src="js/app.js?v=3"></script>
 </body>
 </html>

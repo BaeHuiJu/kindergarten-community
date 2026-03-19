@@ -121,6 +121,54 @@ function setupEventListeners() {
 
     // Expense form
     document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
+
+    // Category management
+    document.getElementById('add-category-form').addEventListener('submit', handleAddCategory);
+    document.getElementById('filter-kg-for-category').addEventListener('change', loadCategoryList);
+
+    // Management tabs
+    document.querySelectorAll('.management-tabs .tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('.management-tabs .tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            const tabName = e.target.dataset.tab;
+            document.querySelectorAll('.management-tab').forEach(t => {
+                t.classList.remove('active');
+                t.style.display = 'none';
+            });
+            const tabEl = document.getElementById(`${tabName}-tab`);
+            if (tabEl) {
+                tabEl.classList.add('active');
+                tabEl.style.display = 'block';
+            }
+        });
+    });
+
+    // Kindergarten form
+    document.getElementById('add-kindergarten-form').addEventListener('submit', handleAddKindergarten);
+
+    // Class form
+    document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
+    document.getElementById('class-kindergarten').addEventListener('change', loadClassesForKindergarten);
+    document.getElementById('filter-kg-for-class').addEventListener('change', filterClasses);
+
+    // Student form
+    document.getElementById('add-student-form').addEventListener('submit', handleAddStudent);
+    document.getElementById('student-kindergarten').addEventListener('change', loadClassesForStudent);
+    document.getElementById('filter-kg-for-student').addEventListener('change', filterStudentsByKg);
+    document.getElementById('filter-class-for-student').addEventListener('change', filterStudentsByClass);
+
+    // Excel upload
+    document.getElementById('upload-excel-btn').addEventListener('click', () => {
+        document.getElementById('excel-upload-modal').style.display = 'flex';
+    });
+    document.querySelector('.modal-close').addEventListener('click', closeExcelModal);
+    document.getElementById('cancel-upload').addEventListener('click', closeExcelModal);
+    document.getElementById('excel-upload-form').addEventListener('submit', handleExcelUpload);
+    document.getElementById('download-template').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = api.getTemplateDownloadUrl();
+    });
 }
 
 function showPage(pageName) {
@@ -155,6 +203,9 @@ function showPage(pageName) {
             break;
         case 'profile':
             loadProfile();
+            break;
+        case 'management':
+            loadManagement();
             break;
     }
 }
@@ -335,6 +386,12 @@ async function loadExpenses() {
     // Load classes for user's kindergarten
     await loadMyClasses();
 
+    // Load expense categories
+    await loadExpenseCategories();
+
+    // Load kindergartens for category management
+    await loadKindergartensForCategory();
+
     try {
         const expenses = await api.getExpenses();
         const students = await api.getStudents();
@@ -434,15 +491,25 @@ async function loadClassSummary() {
 }
 
 async function loadKindergartenSummary() {
-    if (!state.currentUser || !state.currentUser.kindergarten_id) {
-        alert('유치원 정보가 없습니다.');
+    if (!state.currentUser || !state.currentUser.kindergarten_name) {
+        alert('유치원 정보가 없습니다. 프로필에서 유치원을 설정해주세요.');
         return;
     }
 
     try {
-        const summary = await api.getKindergartenSummary(state.currentUser.kindergarten_id);
+        // 유치원 이름으로 ID 찾기
+        const kindergartens = await api.getKindergartens();
+        const myKindergarten = kindergartens.find(kg => kg.name === state.currentUser.kindergarten_name);
+
+        if (!myKindergarten) {
+            alert('등록된 유치원을 찾을 수 없습니다. 학생관리에서 유치원을 먼저 등록해주세요.');
+            return;
+        }
+
+        const summary = await api.getKindergartenSummary(myKindergarten.id);
         document.getElementById('kg-summary-result').innerHTML = components.summaryCard(summary, 'kindergarten');
     } catch (error) {
+        console.error('Kindergarten summary error:', error);
         alert('집계 조회에 실패했습니다.');
     }
 }
@@ -462,7 +529,7 @@ async function loadStudentSummary() {
     }
 }
 
-function loadProfile() {
+function loadProfile(editMode = false) {
     const contentEl = document.getElementById('profile-content');
     if (!state.currentUser) {
         contentEl.innerHTML = `
@@ -471,5 +538,617 @@ function loadProfile() {
         `;
         return;
     }
-    contentEl.innerHTML = components.profileCard(state.currentUser);
+    contentEl.innerHTML = components.profileCard(state.currentUser, editMode);
+
+    if (editMode) {
+        // Load kindergartens and classes for selection
+        loadProfileSelects();
+
+        // Cancel button
+        document.getElementById('cancel-profile-edit').addEventListener('click', () => {
+            loadProfile(false);
+        });
+
+        // Form submit
+        document.getElementById('profile-edit-form').addEventListener('submit', handleProfileSave);
+
+        // Kindergarten change -> load classes
+        document.getElementById('edit-kindergarten').addEventListener('change', async (e) => {
+            const kgId = e.target.value;
+            const kgSelect = e.target;
+            const kgNameInput = document.getElementById('edit-kindergarten-name');
+            const classSelect = document.getElementById('edit-class');
+            const classNameInput = document.getElementById('edit-class-name');
+
+            if (kgId) {
+                // 선택한 유치원명 자동 입력
+                const selectedOption = kgSelect.options[kgSelect.selectedIndex];
+                kgNameInput.value = selectedOption.textContent;
+
+                // 해당 유치원의 반 목록 로드
+                classSelect.innerHTML = '<option value="">직접 입력</option>';
+                try {
+                    const classes = await api.getClasses(kgId);
+                    classes.forEach(cls => {
+                        const option = document.createElement('option');
+                        option.value = cls.id;
+                        option.textContent = cls.name;
+                        classSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Failed to load classes:', error);
+                }
+            } else {
+                classSelect.innerHTML = '<option value="">직접 입력</option>';
+            }
+        });
+
+        // Class change -> auto fill class name
+        document.getElementById('edit-class').addEventListener('change', (e) => {
+            const classSelect = e.target;
+            const classNameInput = document.getElementById('edit-class-name');
+            if (classSelect.value) {
+                const selectedOption = classSelect.options[classSelect.selectedIndex];
+                classNameInput.value = selectedOption.textContent;
+            }
+        });
+    } else {
+        // Add edit button handler
+        document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
+            loadProfile(true);
+        });
+    }
+}
+
+async function loadProfileSelects() {
+    try {
+        const kindergartens = await api.getKindergartens();
+        const kgSelect = document.getElementById('edit-kindergarten');
+
+        kindergartens.forEach(kg => {
+            const option = document.createElement('option');
+            option.value = kg.id;
+            option.textContent = kg.name;
+            kgSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load kindergartens for profile:', error);
+    }
+}
+
+async function handleProfileSave(e) {
+    e.preventDefault();
+
+    const data = {
+        name: document.getElementById('edit-name').value.trim(),
+        region: document.getElementById('edit-region').value.trim(),
+        kindergarten_name: document.getElementById('edit-kindergarten-name').value.trim(),
+        class_name: document.getElementById('edit-class-name').value.trim()
+    };
+
+    if (!data.name) {
+        alert('이름을 입력해주세요.');
+        return;
+    }
+
+    try {
+        const result = await api.updateUser(state.currentUser.id, data);
+        if (result.id) {
+            // 성공 - API 응답으로 상태 업데이트
+            state.currentUser = result;
+            auth.setUser(state.currentUser);
+            alert('프로필이 저장되었습니다.');
+            loadProfile(false);
+            auth.updateNavbar();
+        } else if (result.detail) {
+            alert(result.detail);
+        }
+    } catch (error) {
+        console.error('Profile save error:', error);
+        alert('프로필 저장에 실패했습니다.');
+    }
+}
+
+// ==================== Management Functions ====================
+
+async function loadManagement() {
+    await Promise.all([
+        loadKindergartensTab(),
+        loadKindergartenSelects()
+    ]);
+}
+
+async function loadKindergartenSelects() {
+    try {
+        const kindergartens = await api.getKindergartens();
+        const selects = ['class-kindergarten', 'filter-kg-for-class', 'student-kindergarten', 'filter-kg-for-student'];
+
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const firstOption = select.options[0].outerHTML;
+                select.innerHTML = firstOption;
+                kindergartens.forEach(kg => {
+                    const option = document.createElement('option');
+                    option.value = kg.id;
+                    option.textContent = kg.name;
+                    select.appendChild(option);
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load kindergartens for selects:', error);
+    }
+}
+
+async function loadKindergartensTab() {
+    const listEl = document.getElementById('kindergartens-list');
+    listEl.innerHTML = components.loading();
+
+    try {
+        const kindergartens = await api.getKindergartens();
+        if (kindergartens.length === 0) {
+            listEl.innerHTML = '<p>등록된 유치원이 없습니다.</p>';
+            return;
+        }
+
+        listEl.innerHTML = kindergartens.map(kg => `
+            <div class="data-item" data-id="${kg.id}">
+                <div class="data-item-info">
+                    <span class="name">${kg.name}</span>
+                    <span class="details">${kg.region || ''} ${kg.address || ''}</span>
+                </div>
+                <div class="data-item-actions">
+                    <button class="btn btn-danger btn-small delete-kg">삭제</button>
+                </div>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.delete-kg').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const item = e.target.closest('.data-item');
+                const id = parseInt(item.dataset.id);
+                if (confirm('유치원을 삭제하시겠습니까? 연결된 반과 학생도 함께 삭제됩니다.')) {
+                    await deleteKindergarten(id);
+                }
+            });
+        });
+    } catch (error) {
+        listEl.innerHTML = components.alert('유치원 목록을 불러오는데 실패했습니다.', 'error');
+    }
+}
+
+async function loadClassesTab() {
+    const listEl = document.getElementById('classes-list');
+    listEl.innerHTML = components.loading();
+
+    try {
+        const filterKgId = document.getElementById('filter-kg-for-class').value;
+        const classes = await api.getClasses(filterKgId || null);
+        const kindergartens = await api.getKindergartens();
+        const kgMap = {};
+        kindergartens.forEach(kg => kgMap[kg.id] = kg.name);
+
+        if (classes.length === 0) {
+            listEl.innerHTML = '<p>등록된 반이 없습니다.</p>';
+            return;
+        }
+
+        listEl.innerHTML = classes.map(cls => `
+            <div class="data-item" data-id="${cls.id}">
+                <div class="data-item-info">
+                    <span class="name">${cls.name}</span>
+                    <span class="details">유치원: ${kgMap[cls.kindergarten_id] || '알 수 없음'}</span>
+                </div>
+                <div class="data-item-actions">
+                    <button class="btn btn-danger btn-small delete-class">삭제</button>
+                </div>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.delete-class').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const item = e.target.closest('.data-item');
+                const id = parseInt(item.dataset.id);
+                if (confirm('반을 삭제하시겠습니까? 연결된 학생도 함께 삭제됩니다.')) {
+                    await deleteClass(id);
+                }
+            });
+        });
+    } catch (error) {
+        listEl.innerHTML = components.alert('반 목록을 불러오는데 실패했습니다.', 'error');
+    }
+}
+
+async function loadStudentsTab() {
+    const listEl = document.getElementById('students-list');
+    listEl.innerHTML = components.loading();
+
+    try {
+        const filterClassId = document.getElementById('filter-class-for-student').value;
+        const students = await api.getStudents(filterClassId || null);
+        const classes = await api.getClasses();
+        const classMap = {};
+        classes.forEach(cls => classMap[cls.id] = cls.name);
+
+        if (students.length === 0) {
+            listEl.innerHTML = '<p>등록된 학생이 없습니다.</p>';
+            return;
+        }
+
+        listEl.innerHTML = students.map(student => `
+            <div class="data-item" data-id="${student.id}">
+                <div class="data-item-info">
+                    <span class="name">${student.name} (${student.age}세)</span>
+                    <span class="details">반: ${classMap[student.class_id] || '알 수 없음'}</span>
+                </div>
+                <div class="data-item-actions">
+                    <button class="btn btn-danger btn-small delete-student">삭제</button>
+                </div>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.delete-student').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const item = e.target.closest('.data-item');
+                const id = parseInt(item.dataset.id);
+                if (confirm('학생을 삭제하시겠습니까?')) {
+                    await deleteStudentItem(id);
+                }
+            });
+        });
+    } catch (error) {
+        listEl.innerHTML = components.alert('학생 목록을 불러오는데 실패했습니다.', 'error');
+    }
+}
+
+async function handleAddKindergarten(e) {
+    e.preventDefault();
+
+    const data = {
+        name: document.getElementById('kg-name').value.trim(),
+        region: document.getElementById('kg-region').value.trim(),
+        address: document.getElementById('kg-address').value.trim()
+    };
+
+    if (!data.name) {
+        alert('유치원명을 입력해주세요.');
+        return;
+    }
+
+    try {
+        await api.createKindergarten(data);
+        alert('유치원이 등록되었습니다.');
+        document.getElementById('add-kindergarten-form').reset();
+        await loadKindergartensTab();
+        await loadKindergartenSelects();
+    } catch (error) {
+        alert('유치원 등록에 실패했습니다.');
+    }
+}
+
+async function handleAddClass(e) {
+    e.preventDefault();
+
+    const data = {
+        name: document.getElementById('class-name').value.trim(),
+        kindergarten_id: parseInt(document.getElementById('class-kindergarten').value)
+    };
+
+    if (!data.name || !data.kindergarten_id) {
+        alert('유치원과 반 이름을 입력해주세요.');
+        return;
+    }
+
+    try {
+        await api.createClass(data);
+        alert('반이 등록되었습니다.');
+        document.getElementById('add-class-form').reset();
+        await loadClassesTab();
+    } catch (error) {
+        alert('반 등록에 실패했습니다.');
+    }
+}
+
+async function handleAddStudent(e) {
+    e.preventDefault();
+
+    const data = {
+        name: document.getElementById('student-name').value.trim(),
+        age: parseInt(document.getElementById('student-age').value) || 5,
+        class_id: parseInt(document.getElementById('student-class').value)
+    };
+
+    if (!data.name || !data.class_id) {
+        alert('반과 학생 이름을 입력해주세요.');
+        return;
+    }
+
+    try {
+        await api.createStudent(data);
+        alert('학생이 등록되었습니다.');
+        document.getElementById('add-student-form').reset();
+        await loadStudentsTab();
+    } catch (error) {
+        alert('학생 등록에 실패했습니다.');
+    }
+}
+
+async function deleteKindergarten(id) {
+    try {
+        await api.deleteKindergarten(id);
+        alert('유치원이 삭제되었습니다.');
+        await loadKindergartensTab();
+        await loadKindergartenSelects();
+    } catch (error) {
+        alert('유치원 삭제에 실패했습니다.');
+    }
+}
+
+async function deleteClass(id) {
+    try {
+        await api.deleteClass(id);
+        alert('반이 삭제되었습니다.');
+        await loadClassesTab();
+    } catch (error) {
+        alert('반 삭제에 실패했습니다.');
+    }
+}
+
+async function deleteStudentItem(id) {
+    try {
+        await api.deleteStudent(id);
+        alert('학생이 삭제되었습니다.');
+        await loadStudentsTab();
+    } catch (error) {
+        alert('학생 삭제에 실패했습니다.');
+    }
+}
+
+async function loadClassesForKindergarten() {
+    // Just trigger class tab load when kindergarten changes
+}
+
+async function loadClassesForStudent() {
+    const kgId = document.getElementById('student-kindergarten').value;
+    const classSelect = document.getElementById('student-class');
+    classSelect.innerHTML = '<option value="">반 선택</option>';
+
+    if (kgId) {
+        try {
+            const classes = await api.getClasses(kgId);
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls.id;
+                option.textContent = cls.name;
+                classSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Failed to load classes:', error);
+        }
+    }
+}
+
+async function filterClasses() {
+    await loadClassesTab();
+}
+
+async function filterStudentsByKg() {
+    const kgId = document.getElementById('filter-kg-for-student').value;
+    const classFilter = document.getElementById('filter-class-for-student');
+    classFilter.innerHTML = '<option value="">전체 반</option>';
+
+    if (kgId) {
+        try {
+            const classes = await api.getClasses(kgId);
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls.id;
+                option.textContent = cls.name;
+                classFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Failed to load classes:', error);
+        }
+    }
+    await loadStudentsTab();
+}
+
+async function filterStudentsByClass() {
+    await loadStudentsTab();
+}
+
+function closeExcelModal() {
+    document.getElementById('excel-upload-modal').style.display = 'none';
+    document.getElementById('excel-upload-form').reset();
+    document.getElementById('upload-result').style.display = 'none';
+}
+
+async function handleExcelUpload(e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('excel-file');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('파일을 선택해주세요.');
+        return;
+    }
+
+    const resultEl = document.getElementById('upload-result');
+    resultEl.style.display = 'block';
+    resultEl.className = '';
+    resultEl.textContent = '업로드 중...';
+
+    try {
+        const result = await api.uploadExcel(file);
+
+        if (result.errors && result.errors.length > 0) {
+            resultEl.className = 'error';
+            resultEl.innerHTML = `
+                <p>일부 오류가 발생했습니다:</p>
+                <ul>${result.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+                <p>유치원 ${result.created_kindergartens}개, 반 ${result.created_classes}개, 학생 ${result.created_students}명이 등록되었습니다.</p>
+            `;
+        } else {
+            resultEl.className = 'success';
+            resultEl.innerHTML = `
+                <p>업로드 완료!</p>
+                <p>유치원 ${result.created_kindergartens}개, 반 ${result.created_classes}개, 학생 ${result.created_students}명이 등록되었습니다.</p>
+            `;
+        }
+
+        // Reload data
+        await loadManagement();
+    } catch (error) {
+        resultEl.className = 'error';
+        resultEl.textContent = '업로드에 실패했습니다: ' + (error.detail || error.message || '알 수 없는 오류');
+    }
+}
+
+// ==================== Expense Category Functions ====================
+
+// 기본 카테고리 목록
+const DEFAULT_CATEGORIES = ['교재비', '급식비', '현장학습비', '특별활동비', '준비물비'];
+
+async function loadExpenseCategories() {
+    const select = document.getElementById('expense-category');
+    select.innerHTML = '<option value="">선택하세요</option>';
+
+    try {
+        // 먼저 사용자 정의 카테고리 로드
+        const categories = await api.getExpenseCategories();
+
+        // 기본 카테고리 추가
+        DEFAULT_CATEGORIES.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            select.appendChild(option);
+        });
+
+        // 사용자 정의 카테고리 추가 (중복 제거)
+        const addedNames = new Set(DEFAULT_CATEGORIES);
+        categories.forEach(cat => {
+            if (!addedNames.has(cat.name)) {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = `${cat.name} (사용자 정의)`;
+                select.appendChild(option);
+                addedNames.add(cat.name);
+            }
+        });
+    } catch (error) {
+        // 오류 시 기본 카테고리만 표시
+        DEFAULT_CATEGORIES.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            select.appendChild(option);
+        });
+    }
+}
+
+async function loadKindergartensForCategory() {
+    try {
+        const kindergartens = await api.getKindergartens();
+        const selects = ['category-kindergarten', 'filter-kg-for-category'];
+
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const firstOption = select.options[0].outerHTML;
+                select.innerHTML = firstOption;
+                kindergartens.forEach(kg => {
+                    const option = document.createElement('option');
+                    option.value = kg.id;
+                    option.textContent = kg.name;
+                    select.appendChild(option);
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load kindergartens for category:', error);
+    }
+}
+
+async function loadCategoryList() {
+    const listEl = document.getElementById('category-list');
+    listEl.innerHTML = components.loading();
+
+    try {
+        const filterKgId = document.getElementById('filter-kg-for-category').value;
+        const categories = await api.getExpenseCategories(filterKgId || null);
+        const kindergartens = await api.getKindergartens();
+        const kgMap = {};
+        kindergartens.forEach(kg => kgMap[kg.id] = kg.name);
+
+        if (categories.length === 0) {
+            listEl.innerHTML = '<p>등록된 사용자 정의 카테고리가 없습니다. 기본 카테고리(교재비, 급식비 등)는 자동으로 사용 가능합니다.</p>';
+            return;
+        }
+
+        listEl.innerHTML = categories.map(cat => `
+            <div class="data-item" data-id="${cat.id}">
+                <div class="data-item-info">
+                    <span class="name">${cat.name}</span>
+                    <span class="details">유치원: ${kgMap[cat.kindergarten_id] || '알 수 없음'}</span>
+                </div>
+                <div class="data-item-actions">
+                    <button class="btn btn-danger btn-small delete-category">삭제</button>
+                </div>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.delete-category').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const item = e.target.closest('.data-item');
+                const id = parseInt(item.dataset.id);
+                if (confirm('카테고리를 삭제하시겠습니까?')) {
+                    await deleteCategory(id);
+                }
+            });
+        });
+    } catch (error) {
+        listEl.innerHTML = components.alert('카테고리 목록을 불러오는데 실패했습니다.', 'error');
+    }
+}
+
+async function handleAddCategory(e) {
+    e.preventDefault();
+
+    const data = {
+        name: document.getElementById('category-name').value.trim(),
+        kindergarten_id: parseInt(document.getElementById('category-kindergarten').value)
+    };
+
+    if (!data.name || !data.kindergarten_id) {
+        alert('유치원과 카테고리명을 입력해주세요.');
+        return;
+    }
+
+    try {
+        const result = await api.createExpenseCategory(data);
+        if (result.detail) {
+            alert(result.detail);
+            return;
+        }
+        alert('카테고리가 추가되었습니다.');
+        document.getElementById('add-category-form').reset();
+        await loadCategoryList();
+        await loadExpenseCategories();
+    } catch (error) {
+        alert('카테고리 추가에 실패했습니다.');
+    }
+}
+
+async function deleteCategory(id) {
+    try {
+        await api.deleteExpenseCategory(id);
+        alert('카테고리가 삭제되었습니다.');
+        await loadCategoryList();
+        await loadExpenseCategories();
+    } catch (error) {
+        alert('카테고리 삭제에 실패했습니다.');
+    }
 }

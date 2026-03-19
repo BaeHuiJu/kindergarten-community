@@ -3,3 +3,7 @@ uvicorn
 sqlalchemy
 pydantic
 python-multipart
+python-jose[cryptography]
+bcrypt
+python-dotenv
+openpyxl

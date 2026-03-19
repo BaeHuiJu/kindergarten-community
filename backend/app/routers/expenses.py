@@ -29,6 +29,43 @@ def get_expenses(student_id: int = None, db: Session = Depends(get_db)):
     return query.order_by(models.Expense.date.desc()).all()
 
 
+# Expense Categories
+@router.get("/categories/", response_model=List[schemas.ExpenseCategory])
+def get_expense_categories(kindergarten_id: int = None, db: Session = Depends(get_db)):
+    query = db.query(models.ExpenseCategory)
+    if kindergarten_id:
+        query = query.filter(models.ExpenseCategory.kindergarten_id == kindergarten_id)
+    return query.all()
+
+
+@router.post("/categories/", response_model=schemas.ExpenseCategory)
+def create_expense_category(category: schemas.ExpenseCategoryCreate, db: Session = Depends(get_db)):
+    # 중복 체크
+    existing = db.query(models.ExpenseCategory).filter(
+        models.ExpenseCategory.name == category.name,
+        models.ExpenseCategory.kindergarten_id == category.kindergarten_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists for this kindergarten")
+
+    db_category = models.ExpenseCategory(**category.model_dump())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@router.delete("/categories/{category_id}")
+def delete_expense_category(category_id: int, db: Session = Depends(get_db)):
+    category = db.query(models.ExpenseCategory).filter(models.ExpenseCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    db.delete(category)
+    db.commit()
+    return {"message": "Category deleted successfully"}
+
+
 @router.get("/{expense_id}", response_model=schemas.Expense)
 def get_expense(expense_id: int, db: Session = Depends(get_db)):
     expense = db.query(models.Expense).filter(models.Expense.id == expense_id).first()
