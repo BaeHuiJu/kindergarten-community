@@ -3,6 +3,28 @@ const API_BASE = window.location.hostname === 'localhost'
     ? 'http://localhost:8888/api'
     : '/api';
 
+// Simple cache for frequently accessed data
+const cache = {
+    data: {},
+    ttl: 30000, // 30 seconds cache
+    set(key, value) {
+        this.data[key] = { value, timestamp: Date.now() };
+    },
+    get(key) {
+        const item = this.data[key];
+        if (!item) return null;
+        if (Date.now() - item.timestamp > this.ttl) {
+            delete this.data[key];
+            return null;
+        }
+        return item.value;
+    },
+    clear(key) {
+        if (key) delete this.data[key];
+        else this.data = {};
+    }
+};
+
 const api = {
     // Helper to get auth headers
     getAuthHeaders() {
@@ -115,10 +137,17 @@ const api = {
         return res.json();
     },
 
-    // Kindergartens
-    async getKindergartens() {
+    // Kindergartens (with caching)
+    async getKindergartens(forceRefresh = false) {
+        const cacheKey = 'kindergartens';
+        if (!forceRefresh) {
+            const cached = cache.get(cacheKey);
+            if (cached) return cached;
+        }
         const res = await fetch(`${API_BASE}/students/kindergartens/`);
-        return res.json();
+        const data = await res.json();
+        cache.set(cacheKey, data);
+        return data;
     },
 
     async createKindergarten(data) {
@@ -127,6 +156,7 @@ const api = {
             headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
+        cache.clear('kindergartens'); // Clear cache after create
         return res.json();
     },
 
@@ -135,6 +165,7 @@ const api = {
             method: 'DELETE',
             headers: this.getAuthHeaders()
         });
+        cache.clear('kindergartens'); // Clear cache after delete
         return res.json();
     },
 
@@ -145,14 +176,21 @@ const api = {
         return res.json();
     },
 
-    // Classes
-    async getClasses(kindergartenId = null) {
+    // Classes (with caching)
+    async getClasses(kindergartenId = null, forceRefresh = false) {
+        const cacheKey = 'classes_' + (kindergartenId || 'all');
+        if (!forceRefresh) {
+            const cached = cache.get(cacheKey);
+            if (cached) return cached;
+        }
         let url = `${API_BASE}/students/classes/`;
         if (kindergartenId) url += `?kindergarten_id=${kindergartenId}`;
         const res = await fetch(url, {
             headers: this.getAuthHeaders()
         });
-        return res.json();
+        const data = await res.json();
+        cache.set(cacheKey, data);
+        return data;
     },
 
     async createClass(data) {
@@ -161,6 +199,7 @@ const api = {
             headers: this.getAuthHeaders(),
             body: JSON.stringify(data)
         });
+        cache.clear(); // Clear all cache after create
         return res.json();
     },
 
@@ -169,6 +208,7 @@ const api = {
             method: 'DELETE',
             headers: this.getAuthHeaders()
         });
+        cache.clear(); // Clear all cache after delete
         return res.json();
     },
 
