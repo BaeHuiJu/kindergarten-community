@@ -813,15 +813,16 @@ def create_kindergarten(kg: KindergartenCreate, db: Session = Depends(get_db)):
 
 @app.get("/api/students/classes/")
 def get_classes(kindergarten_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
-    """Get classes - filtered by user's kindergarten when logged in"""
+    """Get classes - filtered by kindergarten_id parameter or user's kindergarten"""
     try:
         q = db.query(Class)
 
-        # If logged in, force filter by user's kindergarten
-        if user and user.kindergarten_id:
-            q = q.filter(Class.kindergarten_id == user.kindergarten_id)
-        elif kindergarten_id:
+        # If kindergarten_id parameter is provided, use it (for dropdown filtering)
+        if kindergarten_id:
             q = q.filter(Class.kindergarten_id == kindergarten_id)
+        # Otherwise, if logged in with a kindergarten, filter by user's kindergarten
+        elif user and user.kindergarten_id:
+            q = q.filter(Class.kindergarten_id == user.kindergarten_id)
 
         results = q.all()
         return [{"id": c.id, "name": c.name, "kindergarten_id": c.kindergarten_id, "teacher_name": c.teacher_name} for c in results]

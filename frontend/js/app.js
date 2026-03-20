@@ -913,7 +913,8 @@ async function deleteStudentItem(id) {
 }
 
 async function loadClassesForKindergarten() {
-    // Just trigger class tab load when kindergarten changes
+    // When kindergarten changes in class registration form, reload classes list
+    await loadClassesTab();
 }
 
 async function loadClassesForStudent() {
