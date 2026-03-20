@@ -132,78 +132,104 @@ const components = {
     profileCard(user, editMode = false) {
         if (editMode) {
             return `
-                <div class="profile-card">
-                    <h3>${user.name} 선생님 - 프로필 수정</h3>
-                    <form id="profile-edit-form" class="profile-info">
-                        <div class="info-item">
-                            <span class="label">아이디</span>
-                            <span>${user.username}</span>
+                <div class="profile-card toss-style">
+                    <div class="profile-header">
+                        <div class="profile-avatar">${user.name.charAt(0)}</div>
+                        <div class="profile-title">
+                            <h3>${user.name} 선생님</h3>
+                            <p class="profile-subtitle">프로필 수정</p>
                         </div>
-                        <div class="info-item">
-                            <span class="label">이메일</span>
-                            <span>${user.email}</span>
+                    </div>
+                    <form id="profile-edit-form" class="toss-form">
+                        <div class="form-section">
+                            <div class="section-title">기본 정보</div>
+                            <div class="readonly-field">
+                                <span class="field-label">아이디</span>
+                                <span class="field-value">${user.username}</span>
+                            </div>
+                            <div class="readonly-field">
+                                <span class="field-label">이메일</span>
+                                <span class="field-value">${user.email}</span>
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">이름</span>
-                            <input type="text" id="edit-name" value="${user.name}" required>
+
+                        <div class="form-section">
+                            <div class="section-title">수정 가능</div>
+                            <div class="toss-field">
+                                <label for="edit-name">이름</label>
+                                <input type="text" id="edit-name" value="${user.name}" required placeholder="이름을 입력하세요">
+                            </div>
+                            <div class="toss-field">
+                                <label for="edit-region">근무 지역</label>
+                                <input type="text" id="edit-region" value="${user.region || ''}" placeholder="예: 서울시 강남구">
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">근무 지역</span>
-                            <input type="text" id="edit-region" value="${user.region || ''}" placeholder="예: 서울시 강남구">
+
+                        <div class="form-section">
+                            <div class="section-title">소속 정보</div>
+                            <div class="toss-field">
+                                <label for="edit-kindergarten">유치원 선택</label>
+                                <select id="edit-kindergarten">
+                                    <option value="">등록된 유치원에서 선택</option>
+                                </select>
+                            </div>
+                            <div class="toss-field">
+                                <label for="edit-kindergarten-name">유치원명 (직접 입력)</label>
+                                <input type="text" id="edit-kindergarten-name" value="${user.kindergarten_name || ''}" placeholder="위에서 선택하거나 직접 입력">
+                            </div>
+                            <div class="toss-field">
+                                <label for="edit-class">담당 반 선택</label>
+                                <select id="edit-class">
+                                    <option value="">등록된 반에서 선택</option>
+                                </select>
+                            </div>
+                            <div class="toss-field">
+                                <label for="edit-class-name">반 이름 (직접 입력)</label>
+                                <input type="text" id="edit-class-name" value="${user.class_name || ''}" placeholder="위에서 선택하거나 직접 입력">
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">유치원</span>
-                            <select id="edit-kindergarten">
-                                <option value="">직접 입력</option>
-                            </select>
-                            <input type="text" id="edit-kindergarten-name" value="${user.kindergarten_name || ''}" placeholder="유치원명">
-                        </div>
-                        <div class="info-item">
-                            <span class="label">담당 반</span>
-                            <select id="edit-class">
-                                <option value="">직접 입력</option>
-                            </select>
-                            <input type="text" id="edit-class-name" value="${user.class_name || ''}" placeholder="반 이름">
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" id="cancel-profile-edit" class="btn btn-secondary">취소</button>
-                            <button type="submit" class="btn btn-primary">저장</button>
+
+                        <div class="toss-actions">
+                            <button type="button" id="cancel-profile-edit" class="btn-toss btn-toss-secondary">취소</button>
+                            <button type="submit" class="btn-toss btn-toss-primary">저장하기</button>
                         </div>
                     </form>
                 </div>
             `;
         }
         return `
-            <div class="profile-card">
-                <h3>${user.name} 선생님</h3>
-                <div class="profile-info">
-                    <div class="info-item">
-                        <span class="label">아이디</span>
-                        <span>${user.username}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">이메일</span>
-                        <span>${user.email}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">근무 지역</span>
-                        <span>${user.region || '-'}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">유치원</span>
-                        <span>${user.kindergarten_name || '-'}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">담당 반</span>
-                        <span>${user.class_name || '-'}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">가입일</span>
-                        <span>${this.formatDate(user.created_at)}</span>
+            <div class="profile-card toss-style">
+                <div class="profile-header">
+                    <div class="profile-avatar">${user.name.charAt(0)}</div>
+                    <div class="profile-title">
+                        <h3>${user.name} 선생님</h3>
+                        <p class="profile-subtitle">${user.kindergarten_name || '소속 미등록'}</p>
                     </div>
                 </div>
-                <div class="form-actions" style="margin-top: 1rem;">
-                    <button id="edit-profile-btn" class="btn btn-primary">프로필 수정</button>
+                <div class="toss-info-list">
+                    <div class="toss-info-item">
+                        <span class="info-label">아이디</span>
+                        <span class="info-value">${user.username}</span>
+                    </div>
+                    <div class="toss-info-item">
+                        <span class="info-label">이메일</span>
+                        <span class="info-value">${user.email}</span>
+                    </div>
+                    <div class="toss-info-item">
+                        <span class="info-label">근무 지역</span>
+                        <span class="info-value">${user.region || '-'}</span>
+                    </div>
+                    <div class="toss-info-item">
+                        <span class="info-label">담당 반</span>
+                        <span class="info-value">${user.class_name || '-'}</span>
+                    </div>
+                    <div class="toss-info-item">
+                        <span class="info-label">가입일</span>
+                        <span class="info-value">${this.formatDate(user.created_at)}</span>
+                    </div>
+                </div>
+                <div class="toss-actions">
+                    <button id="edit-profile-btn" class="btn-toss btn-toss-primary btn-toss-full">프로필 수정</button>
                 </div>
             </div>
         `;
