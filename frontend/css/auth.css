@@ -1,6 +1,6 @@
-/* Auth Pages Styles */
+/* Auth Pages Styles - Warm Kindergarten Theme */
 .auth-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #C4915E 0%, #A67C52 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -17,7 +17,7 @@
     background: white;
     border-radius: 15px;
     padding: 2.5rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 40px rgba(93, 64, 55, 0.25);
 }
 
 .auth-card.signup-card {
@@ -30,13 +30,13 @@
 }
 
 .auth-header h1 {
-    color: #667eea;
+    color: #A67C52;
     font-size: 1.8rem;
     margin-bottom: 0.5rem;
 }
 
 .auth-header p {
-    color: #666;
+    color: #8B7355;
     font-size: 0.95rem;
 }
 
@@ -48,41 +48,45 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #333;
+    color: #5D4E37;
     font-size: 0.9rem;
 }
 
 .auth-form input {
     width: 100%;
     padding: 0.85rem 1rem;
-    border: 2px solid #e0e0e0;
+    border: 2px solid #E8DDD4;
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.3s ease;
+    color: #5D4E37;
 }
 
 .auth-form input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #C4915E;
+    box-shadow: 0 0 0 3px rgba(196, 145, 94, 0.1);
 }
 
 .auth-form input::placeholder {
-    color: #aaa;
+    color: #B8A898;
 }
 
 .auth-form select {
     width: 100%;
     padding: 0.85rem 1rem;
-    border: 2px solid #e0e0e0;
+    border: 2px solid #E8DDD4;
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.3s ease;
     background: white;
+    color: #5D4E37;
 }
 
 .auth-form select:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #C4915E;
+    box-shadow: 0 0 0 3px rgba(196, 145, 94, 0.1);
 }
 
 .radio-group {
@@ -97,11 +101,13 @@
     gap: 0.5rem;
     cursor: pointer;
     font-weight: normal;
+    color: #5D4E37;
 }
 
 .radio-label input[type="radio"] {
     width: auto;
     cursor: pointer;
+    accent-color: #C4915E;
 }
 
 .btn-full {
@@ -109,10 +115,24 @@
     padding: 1rem;
     font-size: 1.1rem;
     margin-top: 0.5rem;
+    background: linear-gradient(135deg, #C4915E 0%, #A67C52 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(196, 145, 94, 0.3);
+}
+
+.btn-full:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(196, 145, 94, 0.4);
 }
 
 .error-message {
-    color: #e74c3c;
+    color: #E57373;
     font-size: 0.9rem;
     margin-bottom: 1rem;
     text-align: center;
@@ -123,35 +143,36 @@
     text-align: center;
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #E8DDD4;
 }
 
 .auth-footer p {
-    color: #666;
+    color: #8B7355;
     font-size: 0.9rem;
     margin-bottom: 0.5rem;
 }
 
 .auth-footer .link {
-    color: #667eea;
+    color: #C4915E;
     text-decoration: none;
     font-weight: 500;
 }
 
 .auth-footer .link:hover {
     text-decoration: underline;
+    color: #A67C52;
 }
 
 /* Demo Accounts */
 .demo-accounts {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #E8DDD4;
 }
 
 .demo-accounts > p {
     text-align: center;
-    color: #666;
+    color: #8B7355;
     font-size: 0.85rem;
     margin-bottom: 0.75rem;
 }
@@ -165,17 +186,18 @@
 
 .demo-btn {
     padding: 0.5rem 1rem;
-    border: 1px solid #667eea;
+    border: 2px solid #C4915E;
     background: white;
-    color: #667eea;
+    color: #C4915E;
     border-radius: 20px;
     cursor: pointer;
     font-size: 0.85rem;
+    font-weight: 500;
     transition: all 0.3s ease;
 }
 
 .demo-btn:hover {
-    background: #667eea;
+    background: #C4915E;
     color: white;
 }
 
