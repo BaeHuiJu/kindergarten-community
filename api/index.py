@@ -364,6 +364,36 @@ def health():
     return {"status": "healthy"}
 
 
+@app.get("/api/db-check")
+def db_check(db: Session = Depends(get_db)):
+    """Check database tables"""
+    from sqlalchemy import text
+    tables = {}
+    try:
+        # Check tables
+        result = db.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"))
+        tables["all_tables"] = [row[0] for row in result.fetchall()]
+
+        # Check classes table
+        try:
+            result = db.execute(text("SELECT COUNT(*) FROM classes"))
+            tables["classes_count"] = result.scalar()
+        except Exception as e:
+            tables["classes_error"] = str(e)
+
+        # Check students table
+        try:
+            result = db.execute(text("SELECT COUNT(*) FROM students"))
+            tables["students_count"] = result.scalar()
+        except Exception as e:
+            tables["students_error"] = str(e)
+
+    except Exception as e:
+        tables["error"] = str(e)
+
+    return tables
+
+
 @app.get("/api/migrate")
 def migrate(db: Session = Depends(get_db)):
     """Run database migrations to add missing columns"""
