@@ -103,6 +103,14 @@ class Expense(Base):
     date = Column(DateTime, default=datetime.utcnow)
 
 
+class ExpenseCategory(Base):
+    __tablename__ = "expense_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50))
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Dependency
 def get_db():
     get_engine()
@@ -228,6 +236,20 @@ class ExpenseCreate(BaseModel):
     category: str
     amount: float
     description: Optional[str] = None
+
+
+class ExpenseCategoryResponse(BaseModel):
+    id: int
+    name: str
+    kindergarten_id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+
+class ExpenseCategoryCreate(BaseModel):
+    name: str
+    kindergarten_id: int
 
 
 class Token(BaseModel):
@@ -376,6 +398,27 @@ def migrate(db: Session = Depends(get_db)):
             db.rollback()
             migrations.append(f"posts.kindergarten_id error: {str(e2)}")
 
+    # Create expense_categories table if not exists
+    try:
+        db.execute(text("SELECT id FROM expense_categories LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS expense_categories (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(50) NOT NULL,
+                    kindergarten_id INTEGER REFERENCES kindergartens(id),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            db.commit()
+            migrations.append("Created expense_categories table")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"expense_categories table error: {str(e2)}")
+
     return {"status": "success", "migrations": migrations}
 
 
@@ -454,6 +497,30 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    region: Optional[str] = None
+    kindergarten_name: Optional[str] = None
+    class_name: Optional[str] = None
+
+
+@app.put("/api/users/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    update_data = user_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
     return user
 
 
@@ -748,6 +815,30 @@ def delete_student(student_id: int, db: Session = Depends(get_db), user: User = 
     return {"message": "Deleted"}
 
 
+@app.get("/api/students/template/download")
+def download_template():
+    """Download Excel template for student upload"""
+    from fastapi.responses import Response
+    # Simple CSV template (Excel compatible)
+    csv_content = "name,age,class_name,parent_name,parent_phone\n김철수,5,햇님반,김부모,010-1234-5678\n이영희,6,달님반,이부모,010-8765-4321\n"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=student_template.csv"}
+    )
+
+
+@app.post("/api/students/upload/excel")
+async def upload_excel(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Upload Excel/CSV file for batch student registration"""
+    # Note: File upload handling in Vercel serverless is limited
+    # This is a placeholder that returns instructions
+    return {
+        "message": "Excel upload is not supported in serverless environment. Please use the web form to add students individually.",
+        "alternative": "Use POST /api/students/ to add students one by one"
+    }
+
+
 # ==================== EXPENSES (Kindergarten-scoped) ====================
 
 @app.get("/api/expenses/", response_model=List[ExpenseResponse])
@@ -810,6 +901,46 @@ def delete_expense(expense_id: int, db: Session = Depends(get_db), user: User = 
         raise HTTPException(status_code=403, detail="Access denied")
 
     db.delete(expense)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+# ==================== EXPENSE CATEGORIES ====================
+
+@app.get("/api/expenses/categories/", response_model=List[ExpenseCategoryResponse])
+def get_expense_categories(kindergarten_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """Get expense categories (optionally filtered by kindergarten)"""
+    q = db.query(ExpenseCategory)
+    if kindergarten_id:
+        q = q.filter(ExpenseCategory.kindergarten_id == kindergarten_id)
+    return q.all()
+
+
+@app.post("/api/expenses/categories/", response_model=ExpenseCategoryResponse)
+def create_expense_category(category: ExpenseCategoryCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new expense category"""
+    # Check for duplicate
+    existing = db.query(ExpenseCategory).filter(
+        ExpenseCategory.name == category.name,
+        ExpenseCategory.kindergarten_id == category.kindergarten_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists for this kindergarten")
+
+    db_category = ExpenseCategory(**category.model_dump())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@app.delete("/api/expenses/categories/{category_id}")
+def delete_expense_category(category_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete an expense category"""
+    category = db.query(ExpenseCategory).filter(ExpenseCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(category)
     db.commit()
     return {"message": "Deleted"}
 
