@@ -398,6 +398,73 @@ def migrate(db: Session = Depends(get_db)):
             db.rollback()
             migrations.append(f"posts.kindergarten_id error: {str(e2)}")
 
+    # Create classes table if not exists
+    try:
+        db.execute(text("SELECT id FROM classes LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS classes (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    kindergarten_id INTEGER REFERENCES kindergartens(id),
+                    teacher_name VARCHAR(100)
+                )
+            """))
+            db.commit()
+            migrations.append("Created classes table")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"classes table error: {str(e2)}")
+
+    # Create students table if not exists
+    try:
+        db.execute(text("SELECT id FROM students LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS students (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    age INTEGER,
+                    class_id INTEGER REFERENCES classes(id),
+                    parent_name VARCHAR(100),
+                    parent_phone VARCHAR(20)
+                )
+            """))
+            db.commit()
+            migrations.append("Created students table")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"students table error: {str(e2)}")
+
+    # Create expenses table if not exists
+    try:
+        db.execute(text("SELECT id FROM expenses LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS expenses (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER REFERENCES students(id),
+                    category VARCHAR(50),
+                    amount FLOAT,
+                    description VARCHAR(300),
+                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            db.commit()
+            migrations.append("Created expenses table")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"expenses table error: {str(e2)}")
+
     # Create expense_categories table if not exists
     try:
         db.execute(text("SELECT id FROM expense_categories LIMIT 1"))
