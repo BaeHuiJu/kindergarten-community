@@ -449,6 +449,20 @@ def migrate(db: Session = Depends(get_db)):
             db.rollback()
             migrations.append(f"classes table error: {str(e2)}")
 
+    # Add teacher_name column to classes if not exists
+    try:
+        db.execute(text("SELECT teacher_name FROM classes LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("ALTER TABLE classes ADD COLUMN teacher_name VARCHAR(100)"))
+            db.commit()
+            migrations.append("Added teacher_name to classes")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"classes.teacher_name error: {str(e2)}")
+
     # Create students table if not exists
     try:
         db.execute(text("SELECT id FROM students LIMIT 1"))
@@ -471,6 +485,34 @@ def migrate(db: Session = Depends(get_db)):
         except Exception as e2:
             db.rollback()
             migrations.append(f"students table error: {str(e2)}")
+
+    # Add parent_name column to students if not exists
+    try:
+        db.execute(text("SELECT parent_name FROM students LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("ALTER TABLE students ADD COLUMN parent_name VARCHAR(100)"))
+            db.commit()
+            migrations.append("Added parent_name to students")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"students.parent_name error: {str(e2)}")
+
+    # Add parent_phone column to students if not exists
+    try:
+        db.execute(text("SELECT parent_phone FROM students LIMIT 1"))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        try:
+            db.execute(text("ALTER TABLE students ADD COLUMN parent_phone VARCHAR(20)"))
+            db.commit()
+            migrations.append("Added parent_phone to students")
+        except Exception as e2:
+            db.rollback()
+            migrations.append(f"students.parent_phone error: {str(e2)}")
 
     # Create expenses table if not exists
     try:
