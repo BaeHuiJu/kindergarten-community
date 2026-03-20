@@ -119,6 +119,13 @@ function setupEventListeners() {
     document.getElementById('load-class-summary').addEventListener('click', loadClassSummary);
     document.getElementById('load-kg-summary').addEventListener('click', loadKindergartenSummary);
 
+    // Excel download buttons
+    document.getElementById('download-expenses-excel').addEventListener('click', downloadExpensesExcel);
+    document.getElementById('download-categories-excel').addEventListener('click', downloadCategoriesExcel);
+    document.getElementById('download-student-summary-excel').addEventListener('click', downloadStudentSummaryExcel);
+    document.getElementById('download-class-summary-excel').addEventListener('click', downloadClassSummaryExcel);
+    document.getElementById('download-kg-summary-excel').addEventListener('click', downloadKindergartenSummaryExcel);
+
     // Expense form
     document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
 
@@ -1150,5 +1157,208 @@ async function deleteCategory(id) {
         await loadExpenseCategories();
     } catch (error) {
         alert('카테고리 삭제에 실패했습니다.');
+    }
+}
+
+// ==================== Excel Export Functions ====================
+
+// 엑셀 파일 다운로드 유틸리티
+function downloadExcel(data, sheetName, fileName) {
+    if (!window.XLSX) {
+        alert('엑셀 라이브러리를 로드하는 중입니다. 잠시 후 다시 시도해주세요.');
+        return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, fileName);
+}
+
+// 비용 내역 엑셀 다운로드
+async function downloadExpensesExcel() {
+    try {
+        const expenses = await api.getExpenses();
+        const students = await api.getStudents();
+        const studentMap = {};
+        students.forEach(s => studentMap[s.id] = s.name);
+
+        if (expenses.length === 0) {
+            alert('다운로드할 비용 내역이 없습니다.');
+            return;
+        }
+
+        const data = expenses.map(e => ({
+            '학생명': studentMap[e.student_id] || '알 수 없음',
+            '카테고리': e.category,
+            '금액': e.amount,
+            '설명': e.description || '',
+            '등록일': e.created_at ? new Date(e.created_at).toLocaleDateString('ko-KR') : ''
+        }));
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadExcel(data, '비용내역', `비용내역_${today}.xlsx`);
+    } catch (error) {
+        console.error('Excel download error:', error);
+        alert('엑셀 다운로드에 실패했습니다.');
+    }
+}
+
+// 카테고리 목록 엑셀 다운로드
+async function downloadCategoriesExcel() {
+    try {
+        const categories = await api.getExpenseCategories();
+        const kindergartens = await api.getKindergartens();
+        const kgMap = {};
+        kindergartens.forEach(kg => kgMap[kg.id] = kg.name);
+
+        // 기본 카테고리 + 사용자 정의 카테고리
+        const data = [
+            ...DEFAULT_CATEGORIES.map(cat => ({
+                '카테고리명': cat,
+                '유치원': '기본 카테고리',
+                '유형': '기본'
+            })),
+            ...categories.map(cat => ({
+                '카테고리명': cat.name,
+                '유치원': kgMap[cat.kindergarten_id] || '알 수 없음',
+                '유형': '사용자 정의'
+            }))
+        ];
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadExcel(data, '카테고리목록', `카테고리목록_${today}.xlsx`);
+    } catch (error) {
+        console.error('Excel download error:', error);
+        alert('엑셀 다운로드에 실패했습니다.');
+    }
+}
+
+// 학생별 집계 엑셀 다운로드
+async function downloadStudentSummaryExcel() {
+    const studentId = document.getElementById('student-summary-student').value;
+    if (!studentId) {
+        alert('학생을 먼저 선택하고 조회해주세요.');
+        return;
+    }
+
+    try {
+        const summary = await api.getStudentSummary(studentId);
+        const students = await api.getStudents();
+        const student = students.find(s => s.id === parseInt(studentId));
+        const studentName = student ? student.name : '알 수 없음';
+
+        const data = [
+            { '항목': '학생명', '내용': studentName },
+            { '항목': '총 비용', '내용': summary.total_amount?.toLocaleString() + '원' || '0원' },
+            { '항목': '비용 건수', '내용': summary.expense_count + '건' || '0건' },
+            { '항목': '', '내용': '' },
+            { '항목': '=== 카테고리별 상세 ===', '내용': '' }
+        ];
+
+        if (summary.by_category) {
+            Object.entries(summary.by_category).forEach(([category, amount]) => {
+                data.push({ '항목': category, '내용': amount.toLocaleString() + '원' });
+            });
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadExcel(data, '학생별집계', `학생별집계_${studentName}_${today}.xlsx`);
+    } catch (error) {
+        console.error('Excel download error:', error);
+        alert('엑셀 다운로드에 실패했습니다.');
+    }
+}
+
+// 반별 집계 엑셀 다운로드
+async function downloadClassSummaryExcel() {
+    const classId = document.getElementById('summary-class').value;
+    if (!classId) {
+        alert('반을 먼저 선택하고 조회해주세요.');
+        return;
+    }
+
+    try {
+        const summary = await api.getClassSummary(classId);
+        const classes = await api.getClasses();
+        const cls = classes.find(c => c.id === parseInt(classId));
+        const className = cls ? cls.name : '알 수 없음';
+
+        const data = [
+            { '항목': '반명', '내용': className },
+            { '항목': '총 비용', '내용': summary.total_amount?.toLocaleString() + '원' || '0원' },
+            { '항목': '비용 건수', '내용': summary.expense_count + '건' || '0건' },
+            { '항목': '', '내용': '' },
+            { '항목': '=== 카테고리별 상세 ===', '내용': '' }
+        ];
+
+        if (summary.by_category) {
+            Object.entries(summary.by_category).forEach(([category, amount]) => {
+                data.push({ '항목': category, '내용': amount.toLocaleString() + '원' });
+            });
+        }
+
+        if (summary.by_student) {
+            data.push({ '항목': '', '내용': '' });
+            data.push({ '항목': '=== 학생별 상세 ===', '내용': '' });
+            Object.entries(summary.by_student).forEach(([student, amount]) => {
+                data.push({ '항목': student, '내용': amount.toLocaleString() + '원' });
+            });
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadExcel(data, '반별집계', `반별집계_${className}_${today}.xlsx`);
+    } catch (error) {
+        console.error('Excel download error:', error);
+        alert('엑셀 다운로드에 실패했습니다.');
+    }
+}
+
+// 유치원 집계 엑셀 다운로드
+async function downloadKindergartenSummaryExcel() {
+    if (!state.currentUser || !state.currentUser.kindergarten_name) {
+        alert('유치원 정보가 없습니다. 먼저 조회해주세요.');
+        return;
+    }
+
+    try {
+        const kindergartens = await api.getKindergartens();
+        const myKindergarten = kindergartens.find(kg => kg.name === state.currentUser.kindergarten_name);
+
+        if (!myKindergarten) {
+            alert('유치원 정보를 찾을 수 없습니다.');
+            return;
+        }
+
+        const summary = await api.getKindergartenSummary(myKindergarten.id);
+        const kgName = state.currentUser.kindergarten_name;
+
+        const data = [
+            { '항목': '유치원명', '내용': kgName },
+            { '항목': '총 비용', '내용': summary.total_amount?.toLocaleString() + '원' || '0원' },
+            { '항목': '비용 건수', '내용': summary.expense_count + '건' || '0건' },
+            { '항목': '', '내용': '' },
+            { '항목': '=== 카테고리별 상세 ===', '내용': '' }
+        ];
+
+        if (summary.by_category) {
+            Object.entries(summary.by_category).forEach(([category, amount]) => {
+                data.push({ '항목': category, '내용': amount.toLocaleString() + '원' });
+            });
+        }
+
+        if (summary.by_class) {
+            data.push({ '항목': '', '내용': '' });
+            data.push({ '항목': '=== 반별 상세 ===', '내용': '' });
+            Object.entries(summary.by_class).forEach(([cls, amount]) => {
+                data.push({ '항목': cls, '내용': amount.toLocaleString() + '원' });
+            });
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadExcel(data, '유치원집계', `유치원집계_${kgName}_${today}.xlsx`);
+    } catch (error) {
+        console.error('Excel download error:', error);
+        alert('엑셀 다운로드에 실패했습니다.');
     }
 }

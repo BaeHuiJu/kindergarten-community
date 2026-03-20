@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유치원 선생님 커뮤니티</title>
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=5">
     <link rel="stylesheet" href="css/auth.css?v=3">
 </head>
 <body>
@@ -136,7 +136,10 @@
                 <!-- 비용 입력 탭 -->
                 <div id="expense-input-tab" class="expense-tab active">
                     <div class="expense-form-section">
-                        <h3>비용 입력</h3>
+                        <div class="section-header">
+                            <h3>비용 입력</h3>
+                            <button id="download-expenses-excel" class="btn btn-secondary btn-small">엑셀 다운로드</button>
+                        </div>
                         <form id="expense-form">
                             <div class="form-row">
                                 <div class="form-group">
@@ -181,7 +184,10 @@
                 <!-- 카테고리 관리 탭 -->
                 <div id="category-manage-tab" class="expense-tab">
                     <div class="add-form-section">
-                        <h3>카테고리 추가</h3>
+                        <div class="section-header">
+                            <h3>카테고리 추가</h3>
+                            <button id="download-categories-excel" class="btn btn-secondary btn-small">엑셀 다운로드</button>
+                        </div>
                         <form id="add-category-form" class="inline-form">
                             <select id="category-kindergarten" required>
                                 <option value="">유치원 선택</option>
@@ -211,6 +217,7 @@
                             <option value="">학생 선택</option>
                         </select>
                         <button id="load-student-summary" class="btn btn-primary">조회</button>
+                        <button id="download-student-summary-excel" class="btn btn-secondary">엑셀 다운로드</button>
                     </div>
                     <div id="student-summary-result"></div>
                 </div>
@@ -222,6 +229,7 @@
                             <option value="">반 선택</option>
                         </select>
                         <button id="load-class-summary" class="btn btn-primary">조회</button>
+                        <button id="download-class-summary-excel" class="btn btn-secondary">엑셀 다운로드</button>
                     </div>
                     <div id="class-summary-result"></div>
                 </div>
@@ -230,6 +238,7 @@
                 <div id="kg-summary-tab" class="expense-tab">
                     <div class="summary-selector">
                         <button id="load-kg-summary" class="btn btn-primary">내 유치원 집계 조회</button>
+                        <button id="download-kg-summary-excel" class="btn btn-secondary">엑셀 다운로드</button>
                     </div>
                     <div id="kg-summary-result"></div>
                 </div>
@@ -359,9 +368,10 @@
         <p>2024 유치원 선생님 커뮤니티 MVP</p>
     </footer>
 
-    <script src="js/api.js?v=4"></script>
-    <script src="js/auth.js?v=4"></script>
-    <script src="js/components.js?v=4"></script>
-    <script src="js/app.js?v=4"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="js/api.js?v=5"></script>
+    <script src="js/auth.js?v=5"></script>
+    <script src="js/components.js?v=5"></script>
+    <script src="js/app.js?v=5"></script>
 </body>
 </html>
