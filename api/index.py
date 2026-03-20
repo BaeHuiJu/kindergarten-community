@@ -769,18 +769,22 @@ def create_kindergarten(kg: KindergartenCreate, db: Session = Depends(get_db)):
 
 # ==================== CLASSES (Kindergarten-scoped) ====================
 
-@app.get("/api/students/classes/", response_model=List[ClassResponse])
+@app.get("/api/students/classes/")
 def get_classes(kindergarten_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
     """Get classes - filtered by user's kindergarten when logged in"""
-    q = db.query(Class)
+    try:
+        q = db.query(Class)
 
-    # If logged in, force filter by user's kindergarten
-    if user and user.kindergarten_id:
-        q = q.filter(Class.kindergarten_id == user.kindergarten_id)
-    elif kindergarten_id:
-        q = q.filter(Class.kindergarten_id == kindergarten_id)
+        # If logged in, force filter by user's kindergarten
+        if user and user.kindergarten_id:
+            q = q.filter(Class.kindergarten_id == user.kindergarten_id)
+        elif kindergarten_id:
+            q = q.filter(Class.kindergarten_id == kindergarten_id)
 
-    return q.all()
+        results = q.all()
+        return [{"id": c.id, "name": c.name, "kindergarten_id": c.kindergarten_id, "teacher_name": c.teacher_name} for c in results]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.post("/api/students/classes/", response_model=ClassResponse)
@@ -850,23 +854,27 @@ def delete_class(class_id: int, db: Session = Depends(get_db), user: User = Depe
 
 # ==================== STUDENTS (Kindergarten-scoped) ====================
 
-@app.get("/api/students/", response_model=List[StudentResponse])
+@app.get("/api/students/")
 def get_students(class_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
     """Get students - filtered by user's kindergarten when logged in"""
-    q = db.query(Student)
+    try:
+        q = db.query(Student)
 
-    if user and user.kindergarten_id:
-        # Only show students from user's kindergarten
-        class_ids = get_user_class_ids(db, user)
-        if not class_ids:
-            return []
-        q = q.filter(Student.class_id.in_(class_ids))
-        if class_id and class_id in class_ids:
+        if user and user.kindergarten_id:
+            # Only show students from user's kindergarten
+            class_ids = get_user_class_ids(db, user)
+            if not class_ids:
+                return []
+            q = q.filter(Student.class_id.in_(class_ids))
+            if class_id and class_id in class_ids:
+                q = q.filter(Student.class_id == class_id)
+        elif class_id:
             q = q.filter(Student.class_id == class_id)
-    elif class_id:
-        q = q.filter(Student.class_id == class_id)
 
-    return q.all()
+        results = q.all()
+        return [{"id": s.id, "name": s.name, "age": s.age, "class_id": s.class_id, "parent_name": s.parent_name, "parent_phone": s.parent_phone} for s in results]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.get("/api/students/my", response_model=List[StudentResponse])
