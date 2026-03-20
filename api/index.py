@@ -561,6 +561,27 @@ def get_kindergartens(db: Session = Depends(get_db)):
     return db.query(Kindergarten).all()
 
 
+@app.post("/api/students/kindergartens/", response_model=KindergartenResponse)
+def create_kindergarten_via_students(kg: KindergartenCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new kindergarten (via /students/ path)"""
+    db_kg = Kindergarten(name=kg.name, region=kg.region, address=kg.address)
+    db.add(db_kg)
+    db.commit()
+    db.refresh(db_kg)
+    return db_kg
+
+
+@app.delete("/api/students/kindergartens/{kg_id}")
+def delete_kindergarten(kg_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete a kindergarten"""
+    kg = db.query(Kindergarten).filter(Kindergarten.id == kg_id).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+    db.delete(kg)
+    db.commit()
+    return {"message": "Deleted"}
+
+
 @app.get("/api/kindergartens/my", response_model=KindergartenResponse)
 def get_my_kindergarten(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Get current user's kindergarten"""
@@ -596,6 +617,34 @@ def get_classes(kindergarten_id: Optional[int] = None, db: Session = Depends(get
         q = q.filter(Class.kindergarten_id == kindergarten_id)
 
     return q.all()
+
+
+@app.post("/api/students/classes/", response_model=ClassResponse)
+def create_class_via_students(cls: ClassCreate, kindergarten_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new class (via /students/ path)"""
+    kg_id = kindergarten_id or user.kindergarten_id
+    if not kg_id:
+        raise HTTPException(status_code=400, detail="Kindergarten ID required")
+    db_class = Class(
+        name=cls.name,
+        kindergarten_id=kg_id,
+        teacher_name=cls.teacher_name or user.name
+    )
+    db.add(db_class)
+    db.commit()
+    db.refresh(db_class)
+    return db_class
+
+
+@app.delete("/api/students/classes/{class_id}")
+def delete_class_via_students(class_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete a class (via /students/ path)"""
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+    db.delete(cls)
+    db.commit()
+    return {"message": "Deleted"}
 
 
 @app.get("/api/classes/my", response_model=List[ClassResponse])
