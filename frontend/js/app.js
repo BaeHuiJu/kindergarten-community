@@ -1244,14 +1244,14 @@ async function downloadStudentSummaryExcel() {
 
     try {
         const summary = await api.getStudentSummary(studentId);
-        const students = await api.getStudents();
-        const student = students.find(s => s.id === parseInt(studentId));
-        const studentName = student ? student.name : '알 수 없음';
+        const studentName = summary.student_name || '알 수 없음';
+        const total = summary.total || 0;
+        const expenseCount = summary.expense_count || 0;
 
         const data = [
             { '항목': '학생명', '내용': studentName },
-            { '항목': '총 비용', '내용': summary.total_amount?.toLocaleString() + '원' || '0원' },
-            { '항목': '비용 건수', '내용': summary.expense_count + '건' || '0건' },
+            { '항목': '총 비용', '내용': total.toLocaleString() + '원' },
+            { '항목': '비용 건수', '내용': expenseCount + '건' },
             { '항목': '', '내용': '' },
             { '항목': '=== 카테고리별 상세 ===', '내용': '' }
         ];
@@ -1280,14 +1280,14 @@ async function downloadClassSummaryExcel() {
 
     try {
         const summary = await api.getClassSummary(classId);
-        const classes = await api.getClasses();
-        const cls = classes.find(c => c.id === parseInt(classId));
-        const className = cls ? cls.name : '알 수 없음';
+        const className = summary.class_name || '알 수 없음';
+        const total = summary.total || 0;
+        const studentCount = summary.student_count || 0;
 
         const data = [
             { '항목': '반명', '내용': className },
-            { '항목': '총 비용', '내용': summary.total_amount?.toLocaleString() + '원' || '0원' },
-            { '항목': '비용 건수', '내용': summary.expense_count + '건' || '0건' },
+            { '항목': '총 비용', '내용': total.toLocaleString() + '원' },
+            { '항목': '학생 수', '내용': studentCount + '명' },
             { '항목': '', '내용': '' },
             { '항목': '=== 카테고리별 상세 ===', '내용': '' }
         ];
@@ -1295,14 +1295,6 @@ async function downloadClassSummaryExcel() {
         if (summary.by_category) {
             Object.entries(summary.by_category).forEach(([category, amount]) => {
                 data.push({ '항목': category, '내용': amount.toLocaleString() + '원' });
-            });
-        }
-
-        if (summary.by_student) {
-            data.push({ '항목': '', '내용': '' });
-            data.push({ '항목': '=== 학생별 상세 ===', '내용': '' });
-            Object.entries(summary.by_student).forEach(([student, amount]) => {
-                data.push({ '항목': student, '내용': amount.toLocaleString() + '원' });
             });
         }
 
@@ -1331,12 +1323,16 @@ async function downloadKindergartenSummaryExcel() {
         }
 
         const summary = await api.getKindergartenSummary(myKindergarten.id);
-        const kgName = state.currentUser.kindergarten_name;
+        const kgName = summary.kindergarten_name || state.currentUser.kindergarten_name;
+        const total = summary.total || 0;
+        const classCount = summary.class_count || 0;
+        const studentCount = summary.student_count || 0;
 
         const data = [
             { '항목': '유치원명', '내용': kgName },
-            { '항목': '총 비용', '내용': summary.total_amount?.toLocaleString() + '원' || '0원' },
-            { '항목': '비용 건수', '내용': summary.expense_count + '건' || '0건' },
+            { '항목': '총 비용', '내용': total.toLocaleString() + '원' },
+            { '항목': '반 수', '내용': classCount + '개' },
+            { '항목': '학생 수', '내용': studentCount + '명' },
             { '항목': '', '내용': '' },
             { '항목': '=== 카테고리별 상세 ===', '내용': '' }
         ];
@@ -1344,14 +1340,6 @@ async function downloadKindergartenSummaryExcel() {
         if (summary.by_category) {
             Object.entries(summary.by_category).forEach(([category, amount]) => {
                 data.push({ '항목': category, '내용': amount.toLocaleString() + '원' });
-            });
-        }
-
-        if (summary.by_class) {
-            data.push({ '항목': '', '내용': '' });
-            data.push({ '항목': '=== 반별 상세 ===', '내용': '' });
-            Object.entries(summary.by_class).forEach(([cls, amount]) => {
-                data.push({ '항목': cls, '내용': amount.toLocaleString() + '원' });
             });
         }
 
