@@ -621,7 +621,7 @@ def get_me(user: User = Depends(get_current_user)):
     return user
 
 
-# ==================== STATS ====================
+# ==================== STATS (v2) ====================
 
 @app.get("/api/stats/")
 def get_stats(db: Session = Depends(get_db)):
