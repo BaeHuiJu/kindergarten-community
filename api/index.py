@@ -621,6 +621,22 @@ def get_me(user: User = Depends(get_current_user)):
     return user
 
 
+# ==================== STATS ====================
+
+@app.get("/api/stats")
+def get_stats(db: Session = Depends(get_db)):
+    """Get total stats for homepage - always returns all counts regardless of login status"""
+    total_posts = db.query(Post).count()
+    total_users = db.query(User).count()
+    total_kindergartens = db.query(Kindergarten).count()
+
+    return {
+        "total_posts": total_posts,
+        "total_users": total_users,
+        "total_kindergartens": total_kindergartens
+    }
+
+
 # ==================== USERS ====================
 
 @app.get("/api/users/", response_model=List[UserResponse])

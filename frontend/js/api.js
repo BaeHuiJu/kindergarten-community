@@ -36,6 +36,12 @@ const api = {
         return headers;
     },
 
+    // Stats (for homepage - always returns total counts)
+    async getStats() {
+        const res = await fetch(`${API_BASE}/stats`);
+        return res.json();
+    },
+
     // Users
     async getUsers() {
         const res = await fetch(`${API_BASE}/users/`, {

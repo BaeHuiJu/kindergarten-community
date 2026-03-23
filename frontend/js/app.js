@@ -219,15 +219,16 @@ function showPage(pageName) {
 
 async function loadHomeStats() {
     try {
-        const [posts, users, kindergartens] = await Promise.all([
-            api.getPosts(),
-            api.getUsers(),
-            api.getKindergartens()
+        // Load stats and posts in parallel
+        const [stats, posts] = await Promise.all([
+            api.getStats(),
+            api.getPosts()
         ]);
 
-        document.getElementById('total-posts').textContent = posts.length;
-        document.getElementById('total-users').textContent = users.length;
-        document.getElementById('total-kindergartens').textContent = kindergartens.length;
+        // Display total counts from stats API
+        document.getElementById('total-posts').textContent = stats.total_posts;
+        document.getElementById('total-users').textContent = stats.total_users;
+        document.getElementById('total-kindergartens').textContent = stats.total_kindergartens;
 
         // Recent posts
         const recentPosts = posts.slice(0, 5);
