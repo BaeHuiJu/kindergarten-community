@@ -623,7 +623,7 @@ def get_me(user: User = Depends(get_current_user)):
 
 # ==================== STATS ====================
 
-@app.get("/api/stats")
+@app.get("/api/stats/")
 def get_stats(db: Session = Depends(get_db)):
     """Get total stats for homepage - always returns all counts regardless of login status"""
     total_posts = db.query(Post).count()

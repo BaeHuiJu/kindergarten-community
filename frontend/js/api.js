@@ -38,7 +38,7 @@ const api = {
 
     // Stats (for homepage - always returns total counts)
     async getStats() {
-        const res = await fetch(`${API_BASE}/stats`);
+        const res = await fetch(`${API_BASE}/stats/`);
         return res.json();
     },
 
