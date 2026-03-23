@@ -640,7 +640,10 @@ def get_stats(db: Session = Depends(get_db)):
 # ==================== USERS ====================
 
 @app.get("/api/users/", response_model=List[UserResponse])
-def get_users(db: Session = Depends(get_db), user: User = Depends(get_optional_user)):
+def get_users(db: Session = Depends(get_db), user: User = Depends(get_optional_user), all: bool = False):
+    # If all=true, return all users (for stats)
+    if all:
+        return db.query(User).all()
     # Filter by kindergarten if user is logged in
     if user and user.kindergarten_id:
         return db.query(User).filter(User.kindergarten_id == user.kindergarten_id).all()

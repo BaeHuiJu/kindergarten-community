@@ -36,15 +36,11 @@ const api = {
         return headers;
     },
 
-    // Stats (for homepage - always returns total counts)
-    async getStats() {
-        const res = await fetch(`${API_BASE}/stats/`);
-        return res.json();
-    },
-
     // Users
-    async getUsers() {
-        const res = await fetch(`${API_BASE}/users/`, {
+    async getUsers(all = false) {
+        let url = `${API_BASE}/users/`;
+        if (all) url += '?all=true';
+        const res = await fetch(url, {
             headers: this.getAuthHeaders()
         });
         return res.json();
