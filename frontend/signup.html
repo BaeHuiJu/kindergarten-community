@@ -4,8 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - 유치원 선생님 커뮤니티</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/auth.css?v=9">
+    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/auth.css?v=10">
+    <script>
+        // 이미 로그인된 경우 메인으로 즉시 이동
+        (function() {
+            const token = localStorage.getItem('kindergarten_token');
+            if (token) {
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
 </head>
 <body class="auth-body">
     <div class="auth-container">
@@ -181,11 +190,6 @@
 
         // Initialize
         loadKindergartens();
-
-        // Redirect if already logged in
-        if (auth.isLoggedIn()) {
-            window.location.href = 'index.html';
-        }
     </script>
 </body>
 </html>

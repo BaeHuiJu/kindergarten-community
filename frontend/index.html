@@ -4,8 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유치원 선생님 커뮤니티</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
-    <link rel="stylesheet" href="css/auth.css?v=9">
+    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/auth.css?v=10">
+    <script>
+        // 로그인 체크 - 페이지 로드 전에 실행
+        (function() {
+            const token = localStorage.getItem('kindergarten_token');
+            if (!token) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
 </head>
 <body>
     <header>
