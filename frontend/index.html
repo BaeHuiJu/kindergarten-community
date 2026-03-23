@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유치원 선생님 커뮤니티</title>
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=12">
     <link rel="stylesheet" href="css/auth.css?v=10">
     <script>
         // 로그인 체크 - 페이지 로드 전에 실행
@@ -137,57 +137,128 @@
 
                 <div class="expenses-tabs">
                     <button data-tab="input" class="tab active">비용 입력</button>
+                    <button data-tab="dashboard" class="tab">집계 대시보드</button>
                     <button data-tab="category-manage" class="tab">카테고리 관리</button>
-                    <button data-tab="student-summary" class="tab">학생별 집계</button>
-                    <button data-tab="class-summary" class="tab">반별 집계</button>
-                    <button data-tab="kg-summary" class="tab">유치원 집계</button>
                 </div>
 
-                <!-- 비용 입력 탭 -->
+                <!-- 비용 입력 탭 (위자드 형태) -->
                 <div id="expense-input-tab" class="expense-tab active">
-                    <div class="expense-form-section">
-                        <div class="section-header">
-                            <h3>비용 입력</h3>
-                            <button id="download-expenses-excel" class="btn btn-secondary btn-small">엑셀 다운로드</button>
-                        </div>
-                        <form id="expense-form">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="expense-class">반</label>
-                                    <select id="expense-class" required>
-                                        <option value="">선택하세요</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="expense-student">학생</label>
-                                    <select id="expense-student" required>
-                                        <option value="">선택하세요</option>
-                                    </select>
-                                </div>
+                    <div class="wizard-container">
+                        <!-- 단계 표시 -->
+                        <div class="wizard-steps">
+                            <div class="wizard-step active" data-step="1">
+                                <span class="step-number">1</span>
+                                <span class="step-label">반 선택</span>
                             </div>
-                            <div class="form-row">
+                            <div class="wizard-step" data-step="2">
+                                <span class="step-number">2</span>
+                                <span class="step-label">학생 선택</span>
+                            </div>
+                            <div class="wizard-step" data-step="3">
+                                <span class="step-number">3</span>
+                                <span class="step-label">비용 입력</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: 반 선택 -->
+                        <div class="wizard-content active" id="wizard-step-1">
+                            <h3>어느 반의 비용을 입력하시겠어요?</h3>
+                            <div id="class-select-grid" class="select-card-grid">
+                                <!-- 반 카드들이 동적으로 생성됨 -->
+                            </div>
+                        </div>
+
+                        <!-- Step 2: 학생 선택 -->
+                        <div class="wizard-content" id="wizard-step-2">
+                            <div class="wizard-header">
+                                <button type="button" class="btn-back" id="back-to-step-1">&larr; 반 다시 선택</button>
+                                <h3>어느 학생의 비용인가요?</h3>
+                                <p class="selected-info" id="selected-class-name"></p>
+                            </div>
+                            <div id="student-select-grid" class="select-card-grid">
+                                <!-- 학생 카드들이 동적으로 생성됨 -->
+                            </div>
+                        </div>
+
+                        <!-- Step 3: 비용 입력 -->
+                        <div class="wizard-content" id="wizard-step-3">
+                            <div class="wizard-header">
+                                <button type="button" class="btn-back" id="back-to-step-2">&larr; 학생 다시 선택</button>
+                                <h3>비용 정보를 입력해주세요</h3>
+                                <p class="selected-info" id="selected-student-name"></p>
+                            </div>
+                            <form id="expense-form" class="expense-wizard-form">
                                 <div class="form-group">
                                     <label for="expense-category">비용 카테고리</label>
-                                    <select id="expense-category" required>
-                                        <option value="">선택하세요</option>
-                                    </select>
+                                    <div class="category-buttons" id="category-buttons">
+                                        <!-- 카테고리 버튼들이 동적으로 생성됨 -->
+                                    </div>
+                                    <input type="hidden" id="expense-category" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="expense-amount">금액 (원)</label>
-                                    <input type="number" id="expense-amount" required min="0" step="1000">
+                                    <label for="expense-amount">금액</label>
+                                    <div class="amount-input-wrapper">
+                                        <input type="number" id="expense-amount" required min="0" step="1000" placeholder="0">
+                                        <span class="amount-suffix">원</span>
+                                    </div>
+                                    <div class="quick-amounts">
+                                        <button type="button" class="quick-amount" data-amount="5000">+5천</button>
+                                        <button type="button" class="quick-amount" data-amount="10000">+1만</button>
+                                        <button type="button" class="quick-amount" data-amount="30000">+3만</button>
+                                        <button type="button" class="quick-amount" data-amount="50000">+5만</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="expense-description">설명</label>
-                                <input type="text" id="expense-description" placeholder="비용 설명">
-                            </div>
-                            <button type="submit" class="btn btn-primary">비용 추가</button>
-                        </form>
+                                <div class="form-group">
+                                    <label for="expense-description">설명 (선택)</label>
+                                    <input type="text" id="expense-description" placeholder="예: 3월 교재비">
+                                </div>
+                                <input type="hidden" id="expense-class">
+                                <input type="hidden" id="expense-student">
+                                <button type="submit" class="btn btn-primary btn-large">비용 추가하기</button>
+                            </form>
+                        </div>
                     </div>
 
-                    <div class="expense-list-section">
-                        <h3>최근 비용 내역</h3>
-                        <div id="expense-list"></div>
+                    <!-- 최근 비용 내역 -->
+                    <div class="recent-expenses-section">
+                        <div class="section-header">
+                            <h3>최근 입력 내역</h3>
+                            <button id="download-expenses-excel" class="btn btn-secondary btn-small">엑셀 다운로드</button>
+                        </div>
+                        <div id="expense-list" class="expense-list-compact"></div>
+                    </div>
+                </div>
+
+                <!-- 집계 대시보드 탭 -->
+                <div id="expense-dashboard-tab" class="expense-tab">
+                    <!-- 유치원 전체 요약 -->
+                    <div class="dashboard-summary-card">
+                        <div class="summary-card-header">
+                            <h3 id="dashboard-kg-name">내 유치원</h3>
+                            <button id="download-kg-summary-excel" class="btn btn-secondary btn-small">엑셀</button>
+                        </div>
+                        <div id="kg-summary-quick" class="summary-quick-stats">
+                            <!-- 동적으로 로드됨 -->
+                        </div>
+                    </div>
+
+                    <!-- 반별 집계 카드 -->
+                    <div class="dashboard-section">
+                        <h3>반별 비용 현황</h3>
+                        <div id="class-summary-cards" class="summary-card-grid">
+                            <!-- 반별 카드가 동적으로 생성됨 -->
+                        </div>
+                    </div>
+
+                    <!-- 학생별 상세 (반 선택 시 표시) -->
+                    <div id="student-detail-section" class="dashboard-section" style="display:none;">
+                        <div class="section-header">
+                            <h3 id="student-detail-title">학생별 상세</h3>
+                            <button id="download-student-summary-excel" class="btn btn-secondary btn-small">엑셀</button>
+                        </div>
+                        <div id="student-summary-list" class="student-summary-grid">
+                            <!-- 학생별 요약이 동적으로 생성됨 -->
+                        </div>
                     </div>
                 </div>
 
@@ -215,42 +286,6 @@
                         </div>
                         <div id="category-list" class="data-list"></div>
                     </div>
-                </div>
-
-                <!-- 학생별 집계 탭 -->
-                <div id="student-summary-tab" class="expense-tab">
-                    <div class="summary-selector">
-                        <select id="student-summary-class">
-                            <option value="">반 선택</option>
-                        </select>
-                        <select id="student-summary-student">
-                            <option value="">학생 선택</option>
-                        </select>
-                        <button id="load-student-summary" class="btn btn-primary">조회</button>
-                        <button id="download-student-summary-excel" class="btn btn-secondary">엑셀 다운로드</button>
-                    </div>
-                    <div id="student-summary-result"></div>
-                </div>
-
-                <!-- 반별 집계 탭 -->
-                <div id="class-summary-tab" class="expense-tab">
-                    <div class="summary-selector">
-                        <select id="summary-class">
-                            <option value="">반 선택</option>
-                        </select>
-                        <button id="load-class-summary" class="btn btn-primary">조회</button>
-                        <button id="download-class-summary-excel" class="btn btn-secondary">엑셀 다운로드</button>
-                    </div>
-                    <div id="class-summary-result"></div>
-                </div>
-
-                <!-- 유치원별 집계 탭 -->
-                <div id="kg-summary-tab" class="expense-tab">
-                    <div class="summary-selector">
-                        <button id="load-kg-summary" class="btn btn-primary">내 유치원 집계 조회</button>
-                        <button id="download-kg-summary-excel" class="btn btn-secondary">엑셀 다운로드</button>
-                    </div>
-                    <div id="kg-summary-result"></div>
                 </div>
             </div>
         </section>
@@ -533,6 +568,6 @@
     <script src="js/api.js?v=8"></script>
     <script src="js/auth.js?v=5"></script>
     <script src="js/components.js?v=6"></script>
-    <script src="js/app.js?v=9"></script>
+    <script src="js/app.js?v=10"></script>
 </body>
 </html>

@@ -68,66 +68,52 @@ function setupEventListeners() {
     document.getElementById('back-to-board').addEventListener('click', () => showPage('board'));
     document.getElementById('submit-comment').addEventListener('click', handleCommentSubmit);
 
-    // Expense tabs
+    // Expense tabs (new structure)
     document.querySelectorAll('.expenses-tabs .tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             document.querySelectorAll('.expenses-tabs .tab').forEach(t => t.classList.remove('active'));
             e.target.classList.add('active');
             const tabName = e.target.dataset.tab;
             document.querySelectorAll('.expense-tab').forEach(t => t.classList.remove('active'));
-            const tabId = tabName === 'input' ? 'expense-input-tab' : `${tabName}-tab`;
+
+            let tabId;
+            if (tabName === 'input') tabId = 'expense-input-tab';
+            else if (tabName === 'dashboard') tabId = 'expense-dashboard-tab';
+            else tabId = `${tabName}-tab`;
+
             const tabEl = document.getElementById(tabId);
             if (tabEl) {
                 tabEl.classList.add('active');
+                // Auto-load dashboard when tab is selected
+                if (tabName === 'dashboard') {
+                    loadExpenseDashboard();
+                }
             }
         });
     });
 
-    // Expense class change -> load students
-    document.getElementById('expense-class').addEventListener('change', async (e) => {
-        const classId = e.target.value;
-        const studentSelect = document.getElementById('expense-student');
-        studentSelect.innerHTML = '<option value="">선택하세요</option>';
-        if (classId) {
-            const students = await api.getStudents(classId);
-            students.forEach(student => {
-                const option = document.createElement('option');
-                option.value = student.id;
-                option.textContent = `${student.name} (${student.age}세)`;
-                studentSelect.appendChild(option);
-            });
-        }
-    });
+    // Wizard navigation
+    document.getElementById('back-to-step-1')?.addEventListener('click', () => goToWizardStep(1));
+    document.getElementById('back-to-step-2')?.addEventListener('click', () => goToWizardStep(2));
 
-    // Student summary: class change -> load students
-    document.getElementById('student-summary-class').addEventListener('change', async (e) => {
-        const classId = e.target.value;
-        const studentSelect = document.getElementById('student-summary-student');
-        studentSelect.innerHTML = '<option value="">학생 선택</option>';
-        if (classId) {
-            const students = await api.getStudents(classId);
-            students.forEach(student => {
-                const option = document.createElement('option');
-                option.value = student.id;
-                option.textContent = `${student.name} (${student.age}세)`;
-                studentSelect.appendChild(option);
-            });
-        }
+    // Quick amount buttons
+    document.querySelectorAll('.quick-amount').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const amount = parseInt(e.target.dataset.amount);
+            const input = document.getElementById('expense-amount');
+            const currentValue = parseInt(input.value) || 0;
+            input.value = currentValue + amount;
+        });
     });
-
-    document.getElementById('load-student-summary').addEventListener('click', loadStudentSummary);
-    document.getElementById('load-class-summary').addEventListener('click', loadClassSummary);
-    document.getElementById('load-kg-summary').addEventListener('click', loadKindergartenSummary);
 
     // Excel download buttons
     document.getElementById('download-expenses-excel').addEventListener('click', downloadExpensesExcel);
     document.getElementById('download-categories-excel').addEventListener('click', downloadCategoriesExcel);
-    document.getElementById('download-student-summary-excel').addEventListener('click', downloadStudentSummaryExcel);
-    document.getElementById('download-class-summary-excel').addEventListener('click', downloadClassSummaryExcel);
+    document.getElementById('download-student-summary-excel').addEventListener('click', downloadStudentSummaryExcelNew);
     document.getElementById('download-kg-summary-excel').addEventListener('click', downloadKindergartenSummaryExcel);
 
     // Expense form
-    document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
+    document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmitNew);
 
     // Category management
     document.getElementById('add-category-form').addEventListener('submit', handleAddCategory);
@@ -424,15 +410,168 @@ async function loadExpenses() {
         infoEl.textContent = '유치원 정보가 없습니다. 프로필을 확인해주세요.';
     }
 
-    // Load classes for user's kindergarten
-    await loadMyClasses();
+    // Load classes for wizard step 1
+    await loadClassSelectCards();
 
-    // Load expense categories
-    await loadExpenseCategories();
+    // Load expense categories for step 3
+    await loadExpenseCategoryButtons();
 
     // Load kindergartens for category management
     await loadKindergartensForCategory();
 
+    // Load recent expenses
+    await loadRecentExpenses();
+
+    // Reset wizard to step 1
+    goToWizardStep(1);
+}
+
+// Wizard Step 1: Load class selection cards
+async function loadClassSelectCards() {
+    const gridEl = document.getElementById('class-select-grid');
+    if (!gridEl) return;
+
+    gridEl.innerHTML = '<p class="loading-text">반 목록 불러오는 중...</p>';
+
+    try {
+        const classes = await api.getClasses();
+        state.classes = classes;
+
+        if (classes.length === 0) {
+            gridEl.innerHTML = '<p class="empty-text">등록된 반이 없습니다. 학생 관리에서 반을 먼저 등록해주세요.</p>';
+            return;
+        }
+
+        gridEl.innerHTML = classes.map(cls => `
+            <div class="select-card" data-id="${cls.id}" data-name="${cls.name}">
+                <div class="select-card-icon">👶</div>
+                <div class="select-card-name">${cls.name}</div>
+            </div>
+        `).join('');
+
+        // Add click handlers
+        gridEl.querySelectorAll('.select-card').forEach(card => {
+            card.addEventListener('click', () => selectClass(card.dataset.id, card.dataset.name));
+        });
+    } catch (error) {
+        gridEl.innerHTML = '<p class="error-text">반 목록을 불러오는데 실패했습니다.</p>';
+    }
+}
+
+// Select class and go to step 2
+async function selectClass(classId, className) {
+    state.selectedClassId = classId;
+    state.selectedClassName = className;
+
+    document.getElementById('expense-class').value = classId;
+    document.getElementById('selected-class-name').textContent = `${className} 반`;
+
+    // Load students for this class
+    await loadStudentSelectCards(classId);
+
+    goToWizardStep(2);
+}
+
+// Wizard Step 2: Load student selection cards
+async function loadStudentSelectCards(classId) {
+    const gridEl = document.getElementById('student-select-grid');
+    if (!gridEl) return;
+
+    gridEl.innerHTML = '<p class="loading-text">학생 목록 불러오는 중...</p>';
+
+    try {
+        const students = await api.getStudents(classId);
+        state.students = students;
+
+        if (students.length === 0) {
+            gridEl.innerHTML = '<p class="empty-text">등록된 학생이 없습니다.</p>';
+            return;
+        }
+
+        gridEl.innerHTML = students.map(student => `
+            <div class="select-card" data-id="${student.id}" data-name="${student.name}" data-age="${student.age}">
+                <div class="select-card-icon">🧒</div>
+                <div class="select-card-name">${student.name}</div>
+                <div class="select-card-sub">${student.age}세</div>
+            </div>
+        `).join('');
+
+        // Add click handlers
+        gridEl.querySelectorAll('.select-card').forEach(card => {
+            card.addEventListener('click', () => selectStudent(card.dataset.id, card.dataset.name, card.dataset.age));
+        });
+    } catch (error) {
+        gridEl.innerHTML = '<p class="error-text">학생 목록을 불러오는데 실패했습니다.</p>';
+    }
+}
+
+// Select student and go to step 3
+function selectStudent(studentId, studentName, studentAge) {
+    state.selectedStudentId = studentId;
+    state.selectedStudentName = studentName;
+
+    document.getElementById('expense-student').value = studentId;
+    document.getElementById('selected-student-name').textContent = `${state.selectedClassName} 반 - ${studentName} (${studentAge}세)`;
+
+    // Reset form
+    document.getElementById('expense-amount').value = '';
+    document.getElementById('expense-description').value = '';
+
+    goToWizardStep(3);
+}
+
+// Load expense category buttons
+async function loadExpenseCategoryButtons() {
+    const container = document.getElementById('category-buttons');
+    if (!container) return;
+
+    try {
+        const categories = await api.getExpenseCategories();
+        const allCategories = [...DEFAULT_CATEGORIES];
+
+        // Add custom categories
+        categories.forEach(cat => {
+            if (!allCategories.includes(cat.name)) {
+                allCategories.push(cat.name);
+            }
+        });
+
+        container.innerHTML = allCategories.map(cat => `
+            <button type="button" class="category-btn" data-category="${cat}">${cat}</button>
+        `).join('');
+
+        // Add click handlers
+        container.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                container.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('expense-category').value = btn.dataset.category;
+            });
+        });
+    } catch (error) {
+        container.innerHTML = DEFAULT_CATEGORIES.map(cat => `
+            <button type="button" class="category-btn" data-category="${cat}">${cat}</button>
+        `).join('');
+    }
+}
+
+// Go to wizard step
+function goToWizardStep(step) {
+    // Update step indicators
+    document.querySelectorAll('.wizard-step').forEach(s => {
+        const stepNum = parseInt(s.dataset.step);
+        s.classList.remove('active', 'completed');
+        if (stepNum < step) s.classList.add('completed');
+        if (stepNum === step) s.classList.add('active');
+    });
+
+    // Show correct content
+    document.querySelectorAll('.wizard-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(`wizard-step-${step}`)?.classList.add('active');
+}
+
+// Load recent expenses
+async function loadRecentExpenses() {
     try {
         const expenses = await api.getExpenses();
         const students = await api.getStudents();
@@ -440,16 +579,25 @@ async function loadExpenses() {
         students.forEach(s => studentMap[s.id] = s.name);
 
         const listEl = document.getElementById('expense-list');
-        listEl.innerHTML = expenses.slice(0, 20).map(e =>
-            components.expenseItem(e, studentMap[e.student_id] || '알 수 없음')
-        ).join('') || '<p>비용 내역이 없습니다.</p>';
+        if (!listEl) return;
 
-        document.querySelectorAll('.delete-expense').forEach(btn => {
+        listEl.innerHTML = expenses.slice(0, 10).map(e => `
+            <div class="expense-item-compact" data-id="${e.id}">
+                <div class="expense-info">
+                    <span class="expense-student">${studentMap[e.student_id] || '알 수 없음'}</span>
+                    <span class="expense-category">${e.category}</span>
+                </div>
+                <div class="expense-amount">${e.amount.toLocaleString()}원</div>
+                <button class="btn-delete-expense" title="삭제">×</button>
+            </div>
+        `).join('') || '<p class="empty-text">비용 내역이 없습니다.</p>';
+
+        listEl.querySelectorAll('.btn-delete-expense').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const itemEl = e.target.closest('.expense-item');
+                const itemEl = e.target.closest('.expense-item-compact');
                 if (confirm('삭제하시겠습니까?')) {
                     await api.deleteExpense(parseInt(itemEl.dataset.id));
-                    loadExpenses();
+                    loadRecentExpenses();
                 }
             });
         });
@@ -458,25 +606,243 @@ async function loadExpenses() {
     }
 }
 
+// New expense submit handler for wizard
+async function handleExpenseSubmitNew(e) {
+    e.preventDefault();
+
+    if (!state.currentUser) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+
+    const studentId = document.getElementById('expense-student').value;
+    const category = document.getElementById('expense-category').value;
+    const amount = document.getElementById('expense-amount').value;
+
+    if (!studentId) {
+        alert('학생을 선택해주세요.');
+        goToWizardStep(2);
+        return;
+    }
+
+    if (!category) {
+        alert('카테고리를 선택해주세요.');
+        return;
+    }
+
+    if (!amount || amount <= 0) {
+        alert('금액을 입력해주세요.');
+        return;
+    }
+
+    const data = {
+        student_id: parseInt(studentId),
+        category: category,
+        amount: parseFloat(amount),
+        description: document.getElementById('expense-description').value
+    };
+
+    try {
+        await api.createExpense(data);
+        alert(`${state.selectedStudentName}의 ${category} ${parseInt(amount).toLocaleString()}원이 추가되었습니다.`);
+
+        // Reset and go back to step 2 for quick additional input
+        document.getElementById('expense-amount').value = '';
+        document.getElementById('expense-description').value = '';
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('expense-category').value = '';
+
+        // Refresh recent expenses
+        loadRecentExpenses();
+    } catch (error) {
+        alert('비용 추가에 실패했습니다.');
+    }
+}
+
+// Dashboard functions
+async function loadExpenseDashboard() {
+    // Load kindergarten summary
+    await loadKindergartenQuickSummary();
+
+    // Load class summary cards
+    await loadClassSummaryCards();
+}
+
+async function loadKindergartenQuickSummary() {
+    const container = document.getElementById('kg-summary-quick');
+    const titleEl = document.getElementById('dashboard-kg-name');
+    if (!container) return;
+
+    container.innerHTML = '<p class="loading-text">집계 불러오는 중...</p>';
+
+    try {
+        const kindergartens = await api.getKindergartens();
+        const myKindergarten = kindergartens.find(kg => kg.name === state.currentUser?.kindergarten_name);
+
+        if (!myKindergarten) {
+            titleEl.textContent = '유치원 정보 없음';
+            container.innerHTML = '<p class="empty-text">유치원을 먼저 설정해주세요.</p>';
+            return;
+        }
+
+        titleEl.textContent = myKindergarten.name;
+        const summary = await api.getKindergartenSummary(myKindergarten.id);
+
+        container.innerHTML = `
+            <div class="quick-stat">
+                <span class="quick-stat-value">${(summary.total || 0).toLocaleString()}원</span>
+                <span class="quick-stat-label">총 비용</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-value">${summary.class_count || 0}개</span>
+                <span class="quick-stat-label">반</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-value">${summary.student_count || 0}명</span>
+                <span class="quick-stat-label">학생</span>
+            </div>
+        `;
+    } catch (error) {
+        container.innerHTML = '<p class="error-text">집계를 불러오는데 실패했습니다.</p>';
+    }
+}
+
+async function loadClassSummaryCards() {
+    const container = document.getElementById('class-summary-cards');
+    if (!container) return;
+
+    container.innerHTML = '<p class="loading-text">반별 집계 불러오는 중...</p>';
+
+    try {
+        const classes = await api.getClasses();
+
+        if (classes.length === 0) {
+            container.innerHTML = '<p class="empty-text">등록된 반이 없습니다.</p>';
+            return;
+        }
+
+        // Get summary for each class
+        const summaries = await Promise.all(
+            classes.map(async cls => {
+                try {
+                    const summary = await api.getClassSummary(cls.id);
+                    return { ...cls, summary };
+                } catch {
+                    return { ...cls, summary: { total: 0, student_count: 0 } };
+                }
+            })
+        );
+
+        container.innerHTML = summaries.map(cls => `
+            <div class="summary-card-item" data-class-id="${cls.id}" data-class-name="${cls.name}">
+                <div class="summary-card-header">
+                    <span class="class-name">${cls.name}</span>
+                    <span class="student-count">${cls.summary.student_count || 0}명</span>
+                </div>
+                <div class="summary-card-amount">${(cls.summary.total || 0).toLocaleString()}원</div>
+                <div class="summary-card-action">상세보기 →</div>
+            </div>
+        `).join('');
+
+        // Add click handlers for detail view
+        container.querySelectorAll('.summary-card-item').forEach(card => {
+            card.addEventListener('click', () => loadStudentDetailForClass(card.dataset.classId, card.dataset.className));
+        });
+    } catch (error) {
+        container.innerHTML = '<p class="error-text">집계를 불러오는데 실패했습니다.</p>';
+    }
+}
+
+async function loadStudentDetailForClass(classId, className) {
+    const section = document.getElementById('student-detail-section');
+    const titleEl = document.getElementById('student-detail-title');
+    const container = document.getElementById('student-summary-list');
+
+    if (!section || !container) return;
+
+    section.style.display = 'block';
+    titleEl.textContent = `${className} 반 - 학생별 상세`;
+    container.innerHTML = '<p class="loading-text">학생별 집계 불러오는 중...</p>';
+
+    // Store for excel download
+    state.selectedDashboardClassId = classId;
+    state.selectedDashboardClassName = className;
+
+    try {
+        const students = await api.getStudents(classId);
+
+        if (students.length === 0) {
+            container.innerHTML = '<p class="empty-text">등록된 학생이 없습니다.</p>';
+            return;
+        }
+
+        // Get summary for each student
+        const summaries = await Promise.all(
+            students.map(async student => {
+                try {
+                    const summary = await api.getStudentSummary(student.id);
+                    return { ...student, summary };
+                } catch {
+                    return { ...student, summary: { total: 0, expense_count: 0 } };
+                }
+            })
+        );
+
+        container.innerHTML = summaries.map(student => `
+            <div class="student-summary-item">
+                <div class="student-info">
+                    <span class="student-name">${student.name}</span>
+                    <span class="student-age">${student.age}세</span>
+                </div>
+                <div class="student-expense-info">
+                    <span class="expense-total">${(student.summary.total || 0).toLocaleString()}원</span>
+                    <span class="expense-count">${student.summary.expense_count || 0}건</span>
+                </div>
+            </div>
+        `).join('');
+
+        // Scroll to the section
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+        container.innerHTML = '<p class="error-text">학생별 집계를 불러오는데 실패했습니다.</p>';
+    }
+}
+
+// New excel download for dashboard
+async function downloadStudentSummaryExcelNew() {
+    if (!state.selectedDashboardClassId) {
+        alert('먼저 반을 선택해주세요.');
+        return;
+    }
+
+    try {
+        const students = await api.getStudents(state.selectedDashboardClassId);
+        const summaries = await Promise.all(
+            students.map(async student => {
+                const summary = await api.getStudentSummary(student.id);
+                return { name: student.name, age: student.age, ...summary };
+            })
+        );
+
+        const data = summaries.map(s => ({
+            '학생명': s.name,
+            '나이': s.age + '세',
+            '총 비용': (s.total || 0).toLocaleString() + '원',
+            '비용 건수': (s.expense_count || 0) + '건'
+        }));
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadExcel(data, '학생별집계', `${state.selectedDashboardClassName}_학생별집계_${today}.xlsx`);
+    } catch (error) {
+        alert('엑셀 다운로드에 실패했습니다.');
+    }
+}
+
 async function loadMyClasses() {
+    // This function is kept for backward compatibility but now mainly used by loadClassSelectCards
     try {
         const classes = await api.getClasses();
         state.classes = classes;
-
-        // Populate all class selects
-        const classSelects = ['expense-class', 'summary-class', 'student-summary-class'];
-        classSelects.forEach(id => {
-            const select = document.getElementById(id);
-            if (select) {
-                select.innerHTML = '<option value="">반 선택</option>';
-                classes.forEach(cls => {
-                    const option = document.createElement('option');
-                    option.value = cls.id;
-                    option.textContent = cls.name;
-                    select.appendChild(option);
-                });
-            }
-        });
     } catch (error) {
         console.error('Failed to load classes:', error);
     }
