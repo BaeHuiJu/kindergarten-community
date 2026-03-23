@@ -176,6 +176,30 @@ function setupEventListeners() {
         e.preventDefault();
         window.location.href = api.getTemplateDownloadUrl();
     });
+
+    // AI Assistant tabs
+    document.querySelectorAll('.ai-tabs .tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('.ai-tabs .tab').forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            const tabName = e.target.dataset.tab;
+            document.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+            const tabEl = document.getElementById(`ai-${tabName}-tab`);
+            if (tabEl) {
+                tabEl.classList.add('active');
+            }
+        });
+    });
+
+    // AI form handlers
+    document.getElementById('observation-form').addEventListener('submit', handleObservationSubmit);
+    document.getElementById('assessment-form').addEventListener('submit', handleAssessmentSubmit);
+    document.getElementById('consultation-form').addEventListener('submit', handleConsultationSubmit);
+
+    // AI copy buttons
+    document.getElementById('copy-observation').addEventListener('click', () => copyToClipboard('observation'));
+    document.getElementById('copy-assessment').addEventListener('click', () => copyToClipboard('assessment'));
+    document.getElementById('copy-consultation').addEventListener('click', () => copyToClipboard('consultation'));
 }
 
 function showPage(pageName) {
@@ -213,6 +237,14 @@ function showPage(pageName) {
             break;
         case 'management':
             loadManagement();
+            break;
+        case 'ai-assistant':
+            if (!state.currentUser) {
+                alert('로그인이 필요합니다.');
+                window.location.href = 'login.html';
+                return;
+            }
+            loadAIAssistant();
             break;
     }
 }
@@ -1352,4 +1384,173 @@ async function downloadKindergartenSummaryExcel() {
         console.error('Excel download error:', error);
         alert('엑셀 다운로드에 실패했습니다.');
     }
+}
+
+// ==================== AI Assistant Functions ====================
+
+async function loadAIAssistant() {
+    const statusEl = document.getElementById('ai-status');
+    statusEl.innerHTML = '<span class="loading-text">AI 상태 확인 중...</span>';
+
+    try {
+        const status = await api.getAIStatus();
+        if (status.available) {
+            statusEl.innerHTML = '<span class="status-ok">AI 서비스가 정상 작동 중입니다.</span>';
+        } else {
+            statusEl.innerHTML = '<span class="status-error">AI 서비스를 사용할 수 없습니다. 관리자에게 문의하세요.</span>';
+        }
+    } catch (error) {
+        statusEl.innerHTML = '<span class="status-error">AI 상태를 확인할 수 없습니다.</span>';
+    }
+}
+
+async function handleObservationSubmit(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('generate-observation');
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+
+    // Show loading state
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    btn.disabled = true;
+
+    const data = {
+        student_name: document.getElementById('obs-student-name').value.trim(),
+        age: parseInt(document.getElementById('obs-age').value) || 5,
+        area: document.getElementById('obs-area').value,
+        keywords: document.getElementById('obs-keywords').value.trim()
+    };
+
+    try {
+        const result = await api.generateObservation(data);
+        const resultEl = document.getElementById('observation-result');
+
+        if (result.error || result.detail) {
+            resultEl.innerHTML = `<p class="error-text">${result.error || result.detail}</p>`;
+            document.getElementById('copy-observation').style.display = 'none';
+        } else {
+            resultEl.innerHTML = `<div class="ai-generated-text">${formatAIResponse(result.result)}</div>`;
+            document.getElementById('copy-observation').style.display = 'inline-block';
+        }
+    } catch (error) {
+        document.getElementById('observation-result').innerHTML = '<p class="error-text">생성에 실패했습니다. 다시 시도해주세요.</p>';
+        document.getElementById('copy-observation').style.display = 'none';
+    } finally {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+        btn.disabled = false;
+    }
+}
+
+async function handleAssessmentSubmit(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('generate-assessment');
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    btn.disabled = true;
+
+    const data = {
+        student_name: document.getElementById('assess-student-name').value.trim(),
+        age: parseInt(document.getElementById('assess-age').value) || 5,
+        area: document.getElementById('assess-area').value,
+        level: document.getElementById('assess-level').value
+    };
+
+    try {
+        const result = await api.generateAssessment(data);
+        const resultEl = document.getElementById('assessment-result');
+
+        if (result.error || result.detail) {
+            resultEl.innerHTML = `<p class="error-text">${result.error || result.detail}</p>`;
+            document.getElementById('copy-assessment').style.display = 'none';
+        } else {
+            resultEl.innerHTML = `<div class="ai-generated-text">${formatAIResponse(result.result)}</div>`;
+            document.getElementById('copy-assessment').style.display = 'inline-block';
+        }
+    } catch (error) {
+        document.getElementById('assessment-result').innerHTML = '<p class="error-text">생성에 실패했습니다. 다시 시도해주세요.</p>';
+        document.getElementById('copy-assessment').style.display = 'none';
+    } finally {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+        btn.disabled = false;
+    }
+}
+
+async function handleConsultationSubmit(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('generate-consultation');
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    btn.disabled = true;
+
+    const data = {
+        student_name: document.getElementById('consult-student-name').value.trim(),
+        parent_name: document.getElementById('consult-parent-name').value.trim(),
+        topics: document.getElementById('consult-topics').value.trim(),
+        notes: document.getElementById('consult-notes').value.trim()
+    };
+
+    try {
+        const result = await api.generateConsultation(data);
+        const resultEl = document.getElementById('consultation-result');
+
+        if (result.error || result.detail) {
+            resultEl.innerHTML = `<p class="error-text">${result.error || result.detail}</p>`;
+            document.getElementById('copy-consultation').style.display = 'none';
+        } else {
+            resultEl.innerHTML = `<div class="ai-generated-text">${formatAIResponse(result.result)}</div>`;
+            document.getElementById('copy-consultation').style.display = 'inline-block';
+        }
+    } catch (error) {
+        document.getElementById('consultation-result').innerHTML = '<p class="error-text">생성에 실패했습니다. 다시 시도해주세요.</p>';
+        document.getElementById('copy-consultation').style.display = 'none';
+    } finally {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+        btn.disabled = false;
+    }
+}
+
+function formatAIResponse(text) {
+    // Convert newlines to <br> and escape HTML
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+}
+
+function copyToClipboard(type) {
+    const resultEl = document.getElementById(`${type}-result`);
+    const textEl = resultEl.querySelector('.ai-generated-text');
+
+    if (!textEl) {
+        alert('복사할 내용이 없습니다.');
+        return;
+    }
+
+    // Get text content (convert <br> back to newlines)
+    const text = textEl.innerHTML
+        .replace(/<br>/g, '\n')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+
+    navigator.clipboard.writeText(text).then(() => {
+        alert('클립보드에 복사되었습니다.');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('복사에 실패했습니다. 텍스트를 직접 선택하여 복사해주세요.');
+    });
 }

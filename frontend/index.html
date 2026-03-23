@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유치원 선생님 커뮤니티</title>
-    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/style.css?v=11">
     <link rel="stylesheet" href="css/auth.css?v=10">
     <script>
         // 로그인 체크 - 페이지 로드 전에 실행
@@ -27,6 +27,7 @@
                 <li><a href="#" data-page="board">게시판</a></li>
                 <li><a href="#" data-page="management">학생 관리</a></li>
                 <li><a href="#" data-page="expenses">비용 관리</a></li>
+                <li><a href="#" data-page="ai-assistant">AI 도우미</a></li>
                 <li><a href="#" data-page="profile">프로필</a></li>
             </ul>
             <div class="user-info">
@@ -362,6 +363,157 @@
             </div>
         </section>
 
+        <!-- AI 도우미 페이지 -->
+        <section id="ai-assistant-page" class="page">
+            <div class="container">
+                <h2>AI 도우미</h2>
+                <p class="page-description">AI가 관찰일지, 발달평가, 상담메모 작성을 도와드립니다.</p>
+                <div id="ai-status" class="ai-status"></div>
+
+                <div class="ai-tabs">
+                    <button data-tab="observation" class="tab active">관찰일지</button>
+                    <button data-tab="assessment" class="tab">발달평가</button>
+                    <button data-tab="consultation" class="tab">상담메모</button>
+                </div>
+
+                <!-- 관찰일지 탭 -->
+                <div id="ai-observation-tab" class="ai-tab active">
+                    <div class="ai-form-section">
+                        <h3>관찰일지 작성 도우미</h3>
+                        <p class="form-description">학생의 행동이나 특성 키워드를 입력하면 관찰일지 문구를 생성해드립니다.</p>
+                        <form id="observation-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="obs-student-name">학생 이름</label>
+                                    <input type="text" id="obs-student-name" placeholder="예: 김민준" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="obs-age">나이</label>
+                                    <input type="number" id="obs-age" value="5" min="3" max="7">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="obs-area">관찰 영역</label>
+                                <select id="obs-area" required>
+                                    <option value="사회관계">사회관계</option>
+                                    <option value="의사소통">의사소통</option>
+                                    <option value="신체운동">신체운동</option>
+                                    <option value="예술경험">예술경험</option>
+                                    <option value="자연탐구">자연탐구</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="obs-keywords">관찰 키워드</label>
+                                <textarea id="obs-keywords" placeholder="예: 친구와 블록놀이, 양보하기, 규칙 지키기" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="generate-observation">
+                                <span class="btn-text">관찰일지 생성</span>
+                                <span class="btn-loading" style="display:none;">생성 중...</span>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="ai-result-section">
+                        <h3>생성된 관찰일지</h3>
+                        <div id="observation-result" class="ai-result">
+                            <p class="placeholder-text">위 양식을 작성하고 '관찰일지 생성' 버튼을 클릭하세요.</p>
+                        </div>
+                        <button id="copy-observation" class="btn btn-secondary" style="display:none;">복사하기</button>
+                    </div>
+                </div>
+
+                <!-- 발달평가 탭 -->
+                <div id="ai-assessment-tab" class="ai-tab">
+                    <div class="ai-form-section">
+                        <h3>발달평가 문구 도우미</h3>
+                        <p class="form-description">발달 영역과 수준을 선택하면 평가 문구를 생성해드립니다.</p>
+                        <form id="assessment-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="assess-student-name">학생 이름</label>
+                                    <input type="text" id="assess-student-name" placeholder="예: 김민준" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="assess-age">나이</label>
+                                    <input type="number" id="assess-age" value="5" min="3" max="7">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="assess-area">발달 영역</label>
+                                    <select id="assess-area" required>
+                                        <option value="신체발달">신체발달</option>
+                                        <option value="인지발달">인지발달</option>
+                                        <option value="언어발달">언어발달</option>
+                                        <option value="사회정서발달">사회정서발달</option>
+                                        <option value="자조기술">자조기술</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="assess-level">발달 수준</label>
+                                    <select id="assess-level" required>
+                                        <option value="우수">우수</option>
+                                        <option value="양호">양호</option>
+                                        <option value="보통">보통</option>
+                                        <option value="노력요함">노력요함</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="generate-assessment">
+                                <span class="btn-text">발달평가 생성</span>
+                                <span class="btn-loading" style="display:none;">생성 중...</span>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="ai-result-section">
+                        <h3>생성된 발달평가</h3>
+                        <div id="assessment-result" class="ai-result">
+                            <p class="placeholder-text">위 양식을 작성하고 '발달평가 생성' 버튼을 클릭하세요.</p>
+                        </div>
+                        <button id="copy-assessment" class="btn btn-secondary" style="display:none;">복사하기</button>
+                    </div>
+                </div>
+
+                <!-- 상담메모 탭 -->
+                <div id="ai-consultation-tab" class="ai-tab">
+                    <div class="ai-form-section">
+                        <h3>학부모 상담메모 도우미</h3>
+                        <p class="form-description">상담 주제와 메모를 입력하면 정리된 상담 기록을 생성해드립니다.</p>
+                        <form id="consultation-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="consult-student-name">학생 이름</label>
+                                    <input type="text" id="consult-student-name" placeholder="예: 김민준" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="consult-parent-name">학부모 성함</label>
+                                    <input type="text" id="consult-parent-name" placeholder="예: 김철수">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="consult-topics">상담 주제</label>
+                                <input type="text" id="consult-topics" placeholder="예: 또래관계, 식습관, 낮잠" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="consult-notes">상담 내용 메모</label>
+                                <textarea id="consult-notes" placeholder="상담 중 메모한 내용을 입력하세요..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="generate-consultation">
+                                <span class="btn-text">상담메모 생성</span>
+                                <span class="btn-loading" style="display:none;">생성 중...</span>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="ai-result-section">
+                        <h3>생성된 상담메모</h3>
+                        <div id="consultation-result" class="ai-result">
+                            <p class="placeholder-text">위 양식을 작성하고 '상담메모 생성' 버튼을 클릭하세요.</p>
+                        </div>
+                        <button id="copy-consultation" class="btn btn-secondary" style="display:none;">복사하기</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 프로필 페이지 -->
         <section id="profile-page" class="page">
             <div class="container">
@@ -378,9 +530,9 @@
     </footer>
 
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="js/api.js?v=7"></script>
+    <script src="js/api.js?v=8"></script>
     <script src="js/auth.js?v=5"></script>
     <script src="js/components.js?v=6"></script>
-    <script src="js/app.js?v=8"></script>
+    <script src="js/app.js?v=9"></script>
 </body>
 </html>

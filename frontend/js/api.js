@@ -365,5 +365,40 @@ const api = {
 
     getTemplateDownloadUrl() {
         return `${API_BASE}/students/template/download`;
+    },
+
+    // AI Assistant
+    async getAIStatus() {
+        const res = await fetch(`${API_BASE}/ai/status`, {
+            headers: this.getAuthHeaders()
+        });
+        return res.json();
+    },
+
+    async generateObservation(data) {
+        const res = await fetch(`${API_BASE}/ai/observation`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    async generateAssessment(data) {
+        const res = await fetch(`${API_BASE}/ai/assessment`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    async generateConsultation(data) {
+        const res = await fetch(`${API_BASE}/ai/consultation`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return res.json();
     }
 };

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import bcrypt
 import os
+import httpx
 
 # Database setup
 Base = declarative_base()
@@ -1197,3 +1198,184 @@ def get_my_summary(db: Session = Depends(get_db), user: User = Depends(get_curre
     if not user.kindergarten_id:
         return {"total": 0, "by_category": {}, "class_count": 0, "student_count": 0}
     return get_kg_summary(user.kindergarten_id, db, user)
+
+
+# ==================== AI ASSISTANT ====================
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+class ObservationRequest(BaseModel):
+    student_name: str
+    age: Optional[int] = 5
+    keywords: str  # 쉼표로 구분된 키워드
+    area: str  # 발달영역: 신체, 의사소통, 사회관계, 예술경험, 자연탐구
+
+class AssessmentRequest(BaseModel):
+    student_name: str
+    age: Optional[int] = 5
+    area: str  # 발달영역
+    level: str  # 발달수준: 우수, 보통, 노력필요
+
+class ConsultationRequest(BaseModel):
+    student_name: str
+    parent_name: Optional[str] = ""
+    topics: str  # 상담 주제 키워드
+    notes: str  # 상담 중 메모한 내용
+
+async def call_claude_api(system_prompt: str, user_message: str) -> str:
+    """Call Claude API and return the response"""
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 1024,
+                    "system": system_prompt,
+                    "messages": [
+                        {"role": "user", "content": user_message}
+                    ]
+                },
+                timeout=30.0
+            )
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=f"Claude API error: {response.text}")
+
+            data = response.json()
+            return data["content"][0]["text"]
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="AI 응답 시간 초과")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"AI 요청 실패: {str(e)}")
+
+
+@app.post("/api/ai/observation")
+async def generate_observation(request: ObservationRequest, user: User = Depends(get_current_user)):
+    """Generate observation notes for a student"""
+
+    area_map = {
+        "신체": "신체운동·건강",
+        "의사소통": "의사소통",
+        "사회관계": "사회관계",
+        "예술경험": "예술경험",
+        "자연탐구": "자연탐구"
+    }
+
+    full_area = area_map.get(request.area, request.area)
+
+    system_prompt = """당신은 유치원 교사의 관찰일지 작성을 도와주는 전문 어시스턴트입니다.
+누리과정의 5개 영역(신체운동·건강, 의사소통, 사회관계, 예술경험, 자연탐구)에 대한 전문 지식을 가지고 있습니다.
+
+관찰일지 작성 시 다음 원칙을 따르세요:
+1. 객관적인 관찰 사실을 기술합니다
+2. 아이의 행동, 말, 표정 등을 구체적으로 묘사합니다
+3. 긍정적인 표현을 사용합니다
+4. 발달적 의미를 포함합니다
+5. 2-3문단으로 작성합니다"""
+
+    user_message = f"""다음 정보를 바탕으로 관찰일지를 작성해주세요.
+
+- 유아 이름: {request.student_name}
+- 나이: 만 {request.age}세
+- 관찰 영역: {full_area}
+- 관찰 키워드: {request.keywords}
+
+위 키워드들을 활용하여 자연스럽고 구체적인 관찰일지를 작성해주세요."""
+
+    result = await call_claude_api(system_prompt, user_message)
+    return {"result": result, "area": full_area}
+
+
+@app.post("/api/ai/assessment")
+async def generate_assessment(request: AssessmentRequest, user: User = Depends(get_current_user)):
+    """Generate developmental assessment phrases"""
+
+    area_map = {
+        "신체": "신체운동·건강",
+        "의사소통": "의사소통",
+        "사회관계": "사회관계",
+        "예술경험": "예술경험",
+        "자연탐구": "자연탐구"
+    }
+
+    full_area = area_map.get(request.area, request.area)
+
+    system_prompt = """당신은 유아 발달 평가 전문가입니다.
+누리과정 5개 영역에 대한 발달 평가 문구를 작성합니다.
+
+평가 문구 작성 시 다음 원칙을 따르세요:
+1. 아이의 강점을 먼저 언급합니다
+2. 구체적인 행동 예시를 포함합니다
+3. 발달 수준에 맞는 적절한 표현을 사용합니다
+4. 앞으로의 발달 방향을 제시합니다
+5. 학부모가 이해하기 쉬운 표현을 사용합니다"""
+
+    level_desc = {
+        "우수": "또래에 비해 발달이 우수한",
+        "보통": "또래와 비슷한 발달 수준의",
+        "노력필요": "조금 더 지원이 필요한"
+    }
+
+    user_message = f"""다음 정보를 바탕으로 발달 평가 문구를 작성해주세요.
+
+- 유아 이름: {request.student_name}
+- 나이: 만 {request.age}세
+- 평가 영역: {full_area}
+- 발달 수준: {request.level} ({level_desc.get(request.level, request.level)})
+
+해당 영역에 대한 발달 평가 문구를 3-4문장으로 작성해주세요.
+학부모 상담이나 생활기록부에 사용할 수 있는 전문적이면서도 따뜻한 문구로 작성해주세요."""
+
+    result = await call_claude_api(system_prompt, user_message)
+    return {"result": result, "area": full_area, "level": request.level}
+
+
+@app.post("/api/ai/consultation")
+async def generate_consultation_memo(request: ConsultationRequest, user: User = Depends(get_current_user)):
+    """Generate organized parent consultation memo"""
+
+    system_prompt = """당신은 유치원 교사의 학부모 상담 기록 정리를 도와주는 어시스턴트입니다.
+
+상담 기록 정리 시 다음 형식을 따르세요:
+1. 상담 주제 요약
+2. 주요 논의 내용 (항목별 정리)
+3. 합의/결정 사항
+4. 후속 조치 필요 사항
+5. 교사 소견
+
+작성 시 다음 원칙을 따르세요:
+- 객관적이고 전문적인 어조 사용
+- 민감한 내용은 신중하게 표현
+- 구체적인 내용 포함
+- 명확하고 간결하게 정리"""
+
+    user_message = f"""다음 상담 내용을 정리해주세요.
+
+- 유아 이름: {request.student_name}
+- 학부모: {request.parent_name if request.parent_name else '(미기재)'}
+- 상담 주제: {request.topics}
+- 상담 메모:
+{request.notes}
+
+위 내용을 바탕으로 체계적인 상담 기록을 작성해주세요."""
+
+    result = await call_claude_api(system_prompt, user_message)
+    return {"result": result, "student_name": request.student_name}
+
+
+@app.get("/api/ai/status")
+def get_ai_status():
+    """Check if AI features are available"""
+    return {
+        "available": bool(ANTHROPIC_API_KEY),
+        "features": ["observation", "assessment", "consultation"]
+    }
