@@ -400,5 +400,60 @@ const api = {
             body: JSON.stringify(data)
         });
         return res.json();
+    },
+
+    // Site Config
+    async getConfig() {
+        const cacheKey = 'site_config';
+        const cached = cache.get(cacheKey);
+        if (cached) return cached;
+
+        try {
+            const res = await fetch(`${API_BASE}/config`);
+            const data = await res.json();
+            cache.set(cacheKey, data);
+            return data;
+        } catch (error) {
+            return { siteName: '베베클럽', siteDescription: '유치원 선생님들을 위한 커뮤니티' };
+        }
     }
 };
+
+// Auto-apply site config on page load
+async function applySiteConfig() {
+    try {
+        const config = await api.getConfig();
+
+        // Update page title
+        if (document.title.includes('베베클럽')) {
+            document.title = document.title.replace('베베클럽', config.siteName);
+        } else {
+            document.title = config.siteName;
+        }
+
+        // Update all elements with data-site-name attribute
+        document.querySelectorAll('[data-site-name]').forEach(el => {
+            el.textContent = config.siteName;
+        });
+
+        // Update all elements with data-site-description attribute
+        document.querySelectorAll('[data-site-description]').forEach(el => {
+            el.textContent = config.siteDescription;
+        });
+
+        // Update logo h1
+        const logoH1 = document.querySelector('.logo h1');
+        if (logoH1) logoH1.textContent = config.siteName;
+
+        // Update auth header h1
+        const authH1 = document.querySelector('.auth-header h1');
+        if (authH1) authH1.textContent = config.siteName;
+
+        return config;
+    } catch (error) {
+        console.error('Failed to apply site config:', error);
+    }
+}
+
+// Run on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', applySiteConfig);

@@ -1379,3 +1379,16 @@ def get_ai_status():
         "available": bool(ANTHROPIC_API_KEY),
         "features": ["observation", "assessment", "consultation"]
     }
+
+# ==================== SITE CONFIG ====================
+
+SITE_NAME = os.getenv("SITE_NAME", "베베클럽")
+SITE_DESCRIPTION = os.getenv("SITE_DESCRIPTION", "유치원 선생님들을 위한 커뮤니티")
+
+@app.get("/api/config")
+def get_site_config():
+    """Get site configuration"""
+    return {
+        "siteName": SITE_NAME,
+        "siteDescription": SITE_DESCRIPTION
+    }
