@@ -414,32 +414,36 @@ const api = {
             cache.set(cacheKey, data);
             return data;
         } catch (error) {
-            return { siteName: '베베클럽', siteDescription: '유치원 선생님들을 위한 커뮤니티' };
+            // Default fallback values
+            return {
+                siteName: '베베클럽',
+                siteDescription: '유치원 선생님들을 위한 커뮤니티',
+                expenseCategories: ['교재비', '급식비', '현장학습비', '특별활동비', '준비물비'],
+                postCategories: ['자유게시판', '교육자료', 'Q&A'],
+                observationAreas: ['사회관계', '의사소통', '신체운동', '예술경험', '자연탐구'],
+                assessmentAreas: ['신체발달', '인지발달', '언어발달', '사회정서발달', '자조기술'],
+                assessmentLevels: ['우수', '양호', '보통', '노력요함'],
+                demoAccount: { username: 'test_user1', password: 'test123', label: '테스트 선생님' },
+                quickAmounts: [5000, 10000, 30000, 50000]
+            };
         }
     }
 };
+
+// Global site config storage
+let siteConfig = null;
 
 // Auto-apply site config on page load
 async function applySiteConfig() {
     try {
         const config = await api.getConfig();
+        siteConfig = config; // Store globally
 
         // Update page title
-        if (document.title.includes('베베클럽')) {
-            document.title = document.title.replace('베베클럽', config.siteName);
-        } else {
-            document.title = config.siteName;
+        const originalTitle = document.title;
+        if (originalTitle.includes('베베클럽')) {
+            document.title = originalTitle.replace('베베클럽', config.siteName);
         }
-
-        // Update all elements with data-site-name attribute
-        document.querySelectorAll('[data-site-name]').forEach(el => {
-            el.textContent = config.siteName;
-        });
-
-        // Update all elements with data-site-description attribute
-        document.querySelectorAll('[data-site-description]').forEach(el => {
-            el.textContent = config.siteDescription;
-        });
 
         // Update logo h1
         const logoH1 = document.querySelector('.logo h1');
@@ -449,10 +453,85 @@ async function applySiteConfig() {
         const authH1 = document.querySelector('.auth-header h1');
         if (authH1) authH1.textContent = config.siteName;
 
+        // Update footer
+        const footer = document.querySelector('footer p');
+        if (footer && footer.textContent.includes('베베클럽')) {
+            footer.textContent = footer.textContent.replace('베베클럽', config.siteName);
+        }
+
+        // Update post category tabs
+        const categoryTabs = document.querySelector('.category-tabs');
+        if (categoryTabs && config.postCategories) {
+            const allTab = categoryTabs.querySelector('[data-category=""]');
+            categoryTabs.innerHTML = '';
+            if (allTab) categoryTabs.appendChild(allTab);
+            config.postCategories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.dataset.category = cat;
+                btn.className = 'tab';
+                btn.textContent = cat;
+                categoryTabs.appendChild(btn);
+            });
+        }
+
+        // Update post category select
+        const postCategorySelect = document.getElementById('post-category');
+        if (postCategorySelect && config.postCategories) {
+            postCategorySelect.innerHTML = config.postCategories.map(cat =>
+                `<option value="${cat}">${cat}</option>`
+            ).join('');
+        }
+
+        // Update quick amount buttons
+        const quickAmountsContainer = document.querySelector('.quick-amounts');
+        if (quickAmountsContainer && config.quickAmounts) {
+            quickAmountsContainer.innerHTML = config.quickAmounts.map(amount => {
+                const label = amount >= 10000 ? `+${amount/10000}만` : `+${amount/1000}천`;
+                return `<button type="button" class="quick-amount" data-amount="${amount}">${label}</button>`;
+            }).join('');
+        }
+
+        // Update demo account button
+        const demoBtn = document.querySelector('.demo-btn');
+        if (demoBtn && config.demoAccount) {
+            demoBtn.dataset.username = config.demoAccount.username;
+            demoBtn.dataset.password = config.demoAccount.password;
+            demoBtn.textContent = `${config.demoAccount.label} (${config.demoAccount.username})`;
+        }
+
+        // Update observation areas select
+        const obsAreaSelect = document.getElementById('obs-area');
+        if (obsAreaSelect && config.observationAreas) {
+            obsAreaSelect.innerHTML = config.observationAreas.map(area =>
+                `<option value="${area}">${area}</option>`
+            ).join('');
+        }
+
+        // Update assessment areas select
+        const assessAreaSelect = document.getElementById('assess-area');
+        if (assessAreaSelect && config.assessmentAreas) {
+            assessAreaSelect.innerHTML = config.assessmentAreas.map(area =>
+                `<option value="${area}">${area}</option>`
+            ).join('');
+        }
+
+        // Update assessment levels select
+        const assessLevelSelect = document.getElementById('assess-level');
+        if (assessLevelSelect && config.assessmentLevels) {
+            assessLevelSelect.innerHTML = config.assessmentLevels.map(level =>
+                `<option value="${level}">${level}</option>`
+            ).join('');
+        }
+
         return config;
     } catch (error) {
         console.error('Failed to apply site config:', error);
     }
+}
+
+// Helper to get config (sync, returns cached or null)
+function getConfigSync() {
+    return siteConfig;
 }
 
 // Run on DOMContentLoaded

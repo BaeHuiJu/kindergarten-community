@@ -1382,13 +1382,60 @@ def get_ai_status():
 
 # ==================== SITE CONFIG ====================
 
+# Site Info
 SITE_NAME = os.getenv("SITE_NAME", "베베클럽")
 SITE_DESCRIPTION = os.getenv("SITE_DESCRIPTION", "유치원 선생님들을 위한 커뮤니티")
+
+# Categories (comma-separated in env vars)
+DEFAULT_EXPENSE_CATEGORIES = os.getenv(
+    "EXPENSE_CATEGORIES",
+    "교재비,급식비,현장학습비,특별활동비,준비물비"
+).split(",")
+
+DEFAULT_POST_CATEGORIES = os.getenv(
+    "POST_CATEGORIES",
+    "자유게시판,교육자료,Q&A"
+).split(",")
+
+# AI Assistant Areas
+OBSERVATION_AREAS = os.getenv(
+    "OBSERVATION_AREAS",
+    "사회관계,의사소통,신체운동,예술경험,자연탐구"
+).split(",")
+
+ASSESSMENT_AREAS = os.getenv(
+    "ASSESSMENT_AREAS",
+    "신체발달,인지발달,언어발달,사회정서발달,자조기술"
+).split(",")
+
+ASSESSMENT_LEVELS = os.getenv(
+    "ASSESSMENT_LEVELS",
+    "우수,양호,보통,노력요함"
+).split(",")
+
+# Demo Account (for login page)
+DEMO_USERNAME = os.getenv("DEMO_USERNAME", "test_user1")
+DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "test123")
+DEMO_LABEL = os.getenv("DEMO_LABEL", "테스트 선생님")
+
+# Quick Amount Buttons (comma-separated)
+QUICK_AMOUNTS = [int(x) for x in os.getenv("QUICK_AMOUNTS", "5000,10000,30000,50000").split(",")]
 
 @app.get("/api/config")
 def get_site_config():
     """Get site configuration"""
     return {
         "siteName": SITE_NAME,
-        "siteDescription": SITE_DESCRIPTION
+        "siteDescription": SITE_DESCRIPTION,
+        "expenseCategories": DEFAULT_EXPENSE_CATEGORIES,
+        "postCategories": DEFAULT_POST_CATEGORIES,
+        "observationAreas": OBSERVATION_AREAS,
+        "assessmentAreas": ASSESSMENT_AREAS,
+        "assessmentLevels": ASSESSMENT_LEVELS,
+        "demoAccount": {
+            "username": DEMO_USERNAME,
+            "password": DEMO_PASSWORD,
+            "label": DEMO_LABEL
+        },
+        "quickAmounts": QUICK_AMOUNTS
     }

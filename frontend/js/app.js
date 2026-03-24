@@ -527,7 +527,7 @@ async function loadExpenseCategoryButtons() {
 
     try {
         const categories = await api.getExpenseCategories();
-        const allCategories = [...DEFAULT_CATEGORIES];
+        const allCategories = [...getDefaultCategories()];
 
         // Add custom categories
         categories.forEach(cat => {
@@ -549,7 +549,7 @@ async function loadExpenseCategoryButtons() {
             });
         });
     } catch (error) {
-        container.innerHTML = DEFAULT_CATEGORIES.map(cat => `
+        container.innerHTML = getDefaultCategories().map(cat => `
             <button type="button" class="category-btn" data-category="${cat}">${cat}</button>
         `).join('');
     }
@@ -1416,8 +1416,11 @@ async function handleExcelUpload(e) {
 
 // ==================== Expense Category Functions ====================
 
-// 기본 카테고리 목록
-const DEFAULT_CATEGORIES = ['교재비', '급식비', '현장학습비', '특별활동비', '준비물비'];
+// 기본 카테고리 목록 (config에서 로드, 폴백 값 제공)
+function getDefaultCategories() {
+    const config = getConfigSync();
+    return config?.expenseCategories || ['교재비', '급식비', '현장학습비', '특별활동비', '준비물비'];
+}
 
 async function loadExpenseCategories() {
     const select = document.getElementById('expense-category');
@@ -1428,7 +1431,7 @@ async function loadExpenseCategories() {
         const categories = await api.getExpenseCategories();
 
         // 기본 카테고리 추가
-        DEFAULT_CATEGORIES.forEach(cat => {
+        getDefaultCategories().forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
             option.textContent = cat;
@@ -1436,7 +1439,7 @@ async function loadExpenseCategories() {
         });
 
         // 사용자 정의 카테고리 추가 (중복 제거)
-        const addedNames = new Set(DEFAULT_CATEGORIES);
+        const addedNames = new Set(getDefaultCategories());
         categories.forEach(cat => {
             if (!addedNames.has(cat.name)) {
                 const option = document.createElement('option');
@@ -1448,7 +1451,7 @@ async function loadExpenseCategories() {
         });
     } catch (error) {
         // 오류 시 기본 카테고리만 표시
-        DEFAULT_CATEGORIES.forEach(cat => {
+        getDefaultCategories().forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
             option.textContent = cat;
@@ -1615,7 +1618,7 @@ async function downloadCategoriesExcel() {
 
         // 기본 카테고리 + 사용자 정의 카테고리
         const data = [
-            ...DEFAULT_CATEGORIES.map(cat => ({
+            ...getDefaultCategories().map(cat => ({
                 '카테고리명': cat,
                 '유치원': '기본 카테고리',
                 '유형': '기본'
